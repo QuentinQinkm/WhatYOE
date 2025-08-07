@@ -1,10 +1,10 @@
 {
     "extension_name": {
-        "message": "Native Messaging Demo Extension",
+        "message": "WhatYOE Extension",
         "description": "The display name for the extension."
     },
     "extension_description": {
-        "message": "This is Native Messaging Demo Extension. You should tell us what your extension does here.",
+        "message": "WhatYOE Extension - Analyze job postings based on your years of experience.",
         "description": "Description of what the extension does."
     }
 }

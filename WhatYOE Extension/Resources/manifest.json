@@ -18,12 +18,21 @@
         "scripts": [ "background.js" ]
     },
 
+    "content_scripts": [
+        {
+            "matches": ["*://www.linkedin.com/jobs/*"],
+            "js": ["content.js"],
+            "run_at": "document_end"
+        }
+    ],
+
     "browser_action": {
         "default_icon": {
             "16": "images/toolbar-icon-16.png",
             "32": "images/toolbar-icon-32.png"
-        }
+        },
+        "default_popup": "popup.html"
     },
 
-    "permissions": [ "nativeMessaging" ]
+    "permissions": [ "nativeMessaging", "activeTab" ]
 }
