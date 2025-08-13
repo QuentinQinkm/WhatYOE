@@ -4,7 +4,6 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
 
     class YOEAIAnalyzer {
         constructor() {
-            this.userYears = null;
             this.isAnalyzing = false;
             this.lastUrl = location.href;
             this.analysisResults = new Map();
@@ -53,26 +52,31 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
 
         applyHighlight(card, result) {
             // Clear previous styles first
-            card.style.border = '';
-            card.style.position = '';
+            card.style.position = ''; // Reset position
             card.querySelector('.yoe-ai-label')?.remove();
 
+            // Determine color and text for the label based on AI score
             let text, color;
-            if (result.years === 'unspecified') {
-                text = 'Unspecified';
-                color = '#ffc107'; // Yellow
-            } else if (result.years === null) {
-                text = '? Unspecified';
-                color = '#ffc107'; // Yellow
-            } else if (this.userYears !== null && result.years <= this.userYears) {
-                text = `✓ ${result.years} Year${result.years !== 1 ? 's' : ''}`;
-                color = '#28a745'; // Green
+            if (typeof result.score === 'number') {
+                if (result.score <= 1.0) {
+                    text = `Reject: ${result.score}`;
+                    color = '#dc3545'; // Red
+                } else if (result.score <= 2.0) {
+                    text = `Low: ${result.score}`;
+                    color = '#fd7e14'; // Orange
+                } else if (result.score <= 2.5) {
+                    text = `Maybe: ${result.score}`;
+                    color = '#ffc107'; // Yellow
+                } else {
+                    text = `High: ${result.score}`;
+                    color = '#28a745'; // Green
+                }
             } else {
-                text = `✗ ${result.years} Year${result.years !== 1 ? 's' : ''}`;
-                color = '#dc3545'; // Red
+                text = 'Unknown';
+                color = '#6c757d'; // Gray
             }
 
-            // Create and style the label
+            // Create and style the label (exactly like old working version)
             const label = document.createElement('div');
             label.className = 'yoe-ai-label';
             label.textContent = text;
@@ -90,11 +94,91 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
                 font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             `;
 
-            // Add label to card without colored border
+            // Add label to card without colored border (exactly like old version)
             card.style.position = 'relative';
             card.appendChild(label);
             
-            console.log(`✨ [YOE AI] Applied label "${text}" to card (no border).`);
+            console.log(`[YOE AI] Applied label "${text}" to card (no border).`);
+        }
+        
+        // NEW: Apply progress labels during analysis
+        applyProgressLabel(card, message, color = '#6c757d') {
+            // Clear previous progress label
+            card.querySelector('.yoe-progress-label')?.remove();
+            
+            // Create progress label
+            const label = document.createElement('div');
+            label.className = 'yoe-progress-label';
+            label.textContent = message;
+            
+            label.style.cssText = `
+                position: absolute;
+                bottom: 5px;
+                right: 5px;
+                background-color: ${color};
+                color: white;
+                padding: 3px 6px;
+                font-size: 12px;
+                font-weight: bold;
+                z-index: 1000;
+                font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            `;
+            
+            // Add label to card
+            card.style.position = 'relative';
+            card.appendChild(label);
+            
+            console.log(`[YOE AI] Applied progress label: "${message}"`);
+        }
+        
+        // NEW: Set up progress monitoring for a job card
+        setupProgressMonitoring(card) {
+            // Poll for progress updates every 500ms
+            const progressInterval = setInterval(() => {
+                browser.runtime.sendMessage({
+                    action: "getProgress"
+                }, (response) => {
+                    if (response && response.type === "progress_update") {
+                        // Update the progress label based on stage
+                        let progressText, color;
+                        
+                        switch(response.stage) {
+                            case "parsing_jd":
+                                progressText = "Parsing JD";
+                                color = "#17a2b8"; // Blue
+                                break;
+                            case "round_1":
+                                progressText = "Phase 1: YOE";
+                                color = "#6f42c1"; // Purple
+                                break;
+                            case "round_2":
+                                progressText = "Phase 2: Education";
+                                color = "#fd7e14"; // Orange
+                                break;
+                            case "round_3":
+                                progressText = "Phase 3: Skills";
+                                color = "#e83e8c"; // Pink
+                                break;
+                            case "round_4":
+                                progressText = "Phase 4: Experience";
+                                color = "#20c997"; // Teal
+                                break;
+                            case "final_score":
+                                progressText = "Final Score";
+                                color = "#28a745"; // Green
+                                break;
+                            default:
+                                progressText = response.message;
+                                color = "#6c757d"; // Gray
+                        }
+                        
+                        this.applyProgressLabel(card, progressText, color);
+                    }
+                });
+            }, 500);
+            
+            // Store interval ID to clear later
+            card.progressInterval = progressInterval;
         }
 
         cleanText(text) {
@@ -114,26 +198,22 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
 
             console.log(`🎯 [YOE AI] Getting description for Job ID: ${targetJobId}`);
             
-            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            await new Promise(resolve => setTimeout(resolve, 300));
-            
-            card.querySelector('a')?.click();
-
+            // Wait for job details to be visible
             const startTime = Date.now();
-            const timeout = 12000;
+            const timeout = 15000;
 
             while (Date.now() - startTime < timeout) {
-                const detailsWrapper = document.querySelector('.jobs-search__job-details-wrapper, .jobs-search__right-rail, .scaffold-layout__detail');
+                // Look for job details in different possible locations
+                const detailsWrapper = document.querySelector('.jobs-search__job-details-wrapper, .jobs-search__right-rail, .scaffold-layout__detail, .jobs-search__content');
                 if (detailsWrapper) {
-                    const currentlyDisplayedJobId = this.getDisplayedJobId(detailsWrapper);
-                    const descriptionEl = detailsWrapper.querySelector('.jobs-description__content, .jobs-box__html-content');
+                    const descriptionEl = detailsWrapper.querySelector('.jobs-description__content, .jobs-box__html-content, .jobs-description, .jobs-box__html-content');
                     
-                    if (currentlyDisplayedJobId === targetJobId && descriptionEl && descriptionEl.innerText.length > 50) {
-                        console.log(`✅ [YOE AI] Verified description for ${targetJobId} loaded.`);
+                    if (descriptionEl && descriptionEl.innerText.length > 50) {
+                        console.log(`✅ [YOE AI] Description for ${targetJobId} loaded (${descriptionEl.innerText.length} chars).`);
                         return this.cleanText(descriptionEl.innerText);
                     }
                 }
-                await new Promise(resolve => setTimeout(resolve, 300));
+                await new Promise(resolve => setTimeout(resolve, 200));
             }
 
             console.warn(`⚠️ [YOE AI] Timeout getting description for ${targetJobId}.`);
@@ -154,66 +234,39 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
             return null;
         }
 
-        async extractYearsWithAI(jobDescription) {
-            try {
-                console.log('🤖 [YOE AI] Sending to AI for analysis...');
-                
-                const response = await new Promise((resolve, reject) => {
-                    browser.runtime.sendMessage({
-                        action: "sendPageData",
-                        data: {
-                            pageText: jobDescription,
-                            characterCount: jobDescription.length,
-                            wordCount: jobDescription.trim().split(/\s+/).filter(word => word.length > 0).length,
-                            foundSelector: "job-description",
-                            title: document.title,
-                            url: window.location.href,
-                            timestamp: Date.now()
-                        }
-                    }, response => {
-                        if (response) {
-                            resolve(response);
-                        } else {
-                            reject(new Error('No response from background script'));
-                        }
-                    });
-                });
 
-                const aiAnalysis = response?.aiAnalysis || "0 Year";
-                
-                // Check if background script already formatted as "Unspecified"
-                if (aiAnalysis === "Unspecified" || aiAnalysis.toLowerCase().includes('unspecified')) {
-                    console.log(`🤖 [YOE AI] AI Analysis: "${aiAnalysis}" → unspecified`);
-                    return 'unspecified';
-                }
-                
-                const numberMatch = aiAnalysis.match(/\d+/);
-                const years = numberMatch ? parseInt(numberMatch[0]) : null;
-                
-                console.log(`🤖 [YOE AI] AI Analysis: "${aiAnalysis}" → ${years} years`);
-                return years;
-                
-            } catch (error) {
-                console.error('❌ [YOE AI] AI analysis failed:', error);
-                return null;
-            }
-        }
-
-        async startAnalysis(userYears) {
+        async startAnalysis() {
             if (this.isAnalyzing) {
                 console.log('⚠️ [YOE AI] Analysis already in progress');
                 return { success: false, message: 'Analysis already in progress' };
             }
             
             this.isAnalyzing = true;
-            this.userYears = userYears;
-            console.log(`🚀 [YOE AI] Starting AI analysis with user years: ${userYears}`);
+            console.log(`🚀 [YOE AI] Starting systematic job analysis`);
+            
+            // Clear any previous analysis results for fresh start
             this.analysisResults.clear();
-
+            
+            try {
+                await this.analyzeAllJobsSequentially();
+            } catch (error) {
+                console.error('❌ [YOE AI] Analysis error:', error);
+            }
+            
+            this.isAnalyzing = false;
+            console.log(`✅ [YOE AI] Analysis complete: ${this.analysisResults.size} jobs analyzed`);
+            return { success: true, message: `Analysis completed - ${this.analysisResults.size} jobs analyzed` };
+        }
+        
+        async analyzeAllJobsSequentially() {
+            console.log(`🚀 [YOE AI] Starting continuous analysis loop`);
+            
             let processedInThisRun = new Set();
             let stableScrolls = 0;
+            let maxStableScrolls = 3; // Stop after 3 scrolls with no new jobs
 
-            while (stableScrolls < 3 && this.isAnalyzing) {
+            // Continuous loop to scroll, find new cards, and process them
+            while (stableScrolls < maxStableScrolls && this.isAnalyzing) {
                 const cardsOnPage = this.getJobCards();
                 const newCards = cardsOnPage.filter(card => {
                     const jobId = this.getCardId(card);
@@ -221,47 +274,127 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
                 });
 
                 if (newCards.length > 0) {
-                    console.log(`📊 [YOE AI] Found ${newCards.length} new jobs to analyze.`);
-                    stableScrolls = 0;
+                    console.log(`📊 [YOE AI] Found ${newCards.length} new jobs to process.`);
+                    stableScrolls = 0; // Reset stable count because we found new work to do
 
                     for (const card of newCards) {
-                        if (!this.isAnalyzing) {
-                            console.log('🛑 [YOE AI] Analysis stopped by user');
-                            break;
-                        }
+                        if (!this.isAnalyzing) break; // Check if analysis was stopped
                         
                         const jobId = this.getCardId(card);
                         if (!jobId) continue;
 
                         processedInThisRun.add(jobId);
+                        console.log(`🎯 [YOE AI] Processing job: ${jobId}`);
+                        
                         try {
-                            const description = await this.getVerifiedJobDescription(card);
-                            const years = await this.extractYearsWithAI(description);
+                            // Click the job card to open details
+                            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            await new Promise(resolve => setTimeout(resolve, 500));
                             
-                            const result = { years };
+                            const jobLink = card.querySelector('a[href*="/jobs/view/"]');
+                            if (jobLink) {
+                                jobLink.click();
+                                console.log(`🖱️ [YOE AI] Clicked job card for ${jobId}`);
+                            }
+                            
+                            // Wait for job details to load
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                            
+                            // Get job description and analyze
+                            const description = await this.getVerifiedJobDescription(card);
+                            console.log(`🔍 [YOE AI] Got description for ${jobId}, sending to AI...`);
+                            
+                            // Show "Analyzing..." status
+                            this.applyProgressLabel(card, "Analyzing...", "#6c757d");
+                            
+                            // Set up progress monitoring
+                            this.setupProgressMonitoring(card);
+                            
+                            // Send to AI for analysis
+                            const response = await new Promise((resolve) => {
+                                browser.runtime.sendMessage({
+                                    action: "sendPageData",
+                                    data: {
+                                        pageText: description,
+                                        characterCount: description.length,
+                                        wordCount: description.trim().split(/\s+/).filter(word => word.length > 0).length,
+                                        foundSelector: "job-description",
+                                        title: document.title,
+                                        url: window.location.href,
+                                        timestamp: Date.now()
+                                    }
+                                }, resolve);
+                            });
+
+                                                    // Parse score from AI response
+                        const aiAnalysis = response?.aiAnalysis || "0.0";
+                        // The score is already processed, just convert to number
+                        const score = parseFloat(aiAnalysis) || 0;
+                        
+                        console.log(`🤖 [YOE AI] AI returned: "${aiAnalysis}" → score: ${score}`);
+                        
+                        // Clean up progress monitoring
+                        if (card.progressInterval) {
+                            clearInterval(card.progressInterval);
+                            delete card.progressInterval;
+                        }
+                        
+                        // Apply label to job card
+                        if (score >= 0 && score <= 3) {
+                            const result = { score: score };
                             this.analysisResults.set(jobId, result);
                             this.applyHighlight(card, result);
+                            console.log(`✅ [YOE AI] Job ${jobId} labeled with score: ${score}`);
+                        }
                             
-                            await new Promise(resolve => setTimeout(resolve, 2000));
+                            // Close job details and return to list view
+                            const closeButton = document.querySelector('button[aria-label="Dismiss"], .jobs-search__dismiss, .artdeco-modal__dismiss, .artdeco-modal__dismiss-button');
+                            if (closeButton) {
+                                closeButton.click();
+                                console.log(`❌ [YOE AI] Closed job details for ${jobId}`);
+                                await new Promise(resolve => setTimeout(resolve, 1500));
+                            } else {
+                                console.log(`⚠️ [YOE AI] No close button found for ${jobId}, trying alternative close method`);
+                                // Try pressing Escape key as fallback
+                                document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                            }
+                            
+                            // Wait before next job
+                            await new Promise(resolve => setTimeout(resolve, 1500));
+                            
                         } catch (error) {
                             console.error(`❌ [YOE AI] Error analyzing job ${jobId}:`, error);
+                            
+                            // Try to close job details if there was an error
+                            const closeButton = document.querySelector('button[aria-label="Dismiss"], .jobs-search__dismiss, .artdeco-modal__dismiss, .artdeco-modal__dismiss-button');
+                            if (closeButton) {
+                                closeButton.click();
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                            } else {
+                                // Try pressing Escape key as fallback
+                                document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                            }
                         }
                     }
                 } else {
-                    console.log('📄 [YOE AI] No new cards found, continuing scroll...');
+                    console.log(`📄 [YOE AI] No new cards found on this scroll pass. Stable scrolls: ${stableScrolls + 1}/${maxStableScrolls}`);
                     stableScrolls++;
                 }
                 
+                // Scroll down to check for more jobs
                 if (this.isAnalyzing) {
+                    console.log(`📜 [YOE AI] Scrolling down to find more jobs...`);
                     window.scrollTo(0, document.body.scrollHeight);
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for scroll to complete
                 }
             }
             
-            this.isAnalyzing = false;
-            console.log(`✅ [YOE AI] Analysis complete: ${this.analysisResults.size} jobs analyzed`);
-            return { success: true, message: 'Analysis completed' };
+            console.log(`✅ [YOE AI] Analysis loop complete. Total jobs analyzed: ${this.analysisResults.size}`);
         }
+        
+        // Removed pagination methods - using continuous scrolling instead
         
         stopAnalysis() {
             console.log('🛑 [YOE AI] Stopping analysis...');
@@ -272,24 +405,43 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
         getStats() {
             let stats = { 
                 totalJobs: 0, 
-                qualifyingJobs: 0, 
-                tooHighJobs: 0, 
-                unspecified: 0, 
+                reject: 0,
+                low: 0,
+                maybe: 0,
+                high: 0,
                 isAnalyzing: this.isAnalyzing 
             };
             
             this.analysisResults.forEach(result => {
                 stats.totalJobs++;
-                if (result.years === null || result.years === 'unspecified') {
-                    stats.unspecified++;
-                } else if (this.userYears !== null && result.years <= this.userYears) {
-                    stats.qualifyingJobs++;
-                } else {
-                    stats.tooHighJobs++;
+                
+                // Only process valid numerical scores
+                if (typeof result.score === 'number') {
+                    if (result.score <= 1.0) {
+                        stats.reject++;
+                    } else if (result.score <= 2.0) {
+                        stats.low++;
+                    } else if (result.score <= 2.5) {
+                        stats.maybe++;
+                    } else {
+                        stats.high++;
+                    }
                 }
             });
             
             return stats;
+        }
+        
+        checkForJobDescription() {
+            // Check if we're on a job details page with a proper job description
+            const detailsWrapper = document.querySelector('.jobs-search__job-details-wrapper, .jobs-search__right-rail, .scaffold-layout__detail');
+            if (detailsWrapper) {
+                const descriptionEl = detailsWrapper.querySelector('.jobs-description__content, .jobs-box__html-content');
+                if (descriptionEl && descriptionEl.innerText.trim().length > 50) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 
@@ -302,7 +454,7 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
         }
         
         if (message.action === 'startAnalysis') {
-            window.yoeAI.startAnalysis(message.userYears).then(result => {
+            window.yoeAI.startAnalysis().then(result => {
                 sendResponse(result);
             });
             return true;
@@ -316,6 +468,12 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
         
         if (message.action === 'getStats') {
             sendResponse(window.yoeAI.getStats());
+            return true;
+        }
+        
+        if (message.action === 'checkJobDescription') {
+            const hasJobDesc = window.yoeAI.checkForJobDescription();
+            sendResponse({ hasJobDescription: hasJobDesc });
             return true;
         }
         

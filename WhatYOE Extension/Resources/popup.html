@@ -331,10 +331,55 @@
         .status-message.error {
             color: #ff0000;
         }
+        
+        .update-resume-link {
+            text-align: center;
+            font-size: 14px;
+            color: #007AFF;
+            cursor: pointer;
+            margin-bottom: 15px;
+            text-decoration: underline;
+            font-weight: 300;
+        }
+        
+        .update-resume-link:hover {
+            color: #005bb5;
+        }
+        
+        .resume-selector {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        
+        .resume-selector label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 300;
+            color: #555;
+            font-size: 14px;
+        }
+        
+        .resume-selector select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+            box-sizing: border-box;
+            background-color: white;
+        }
     </style>
 </head>
 <body>
     <div class="auto-analysis-on-parent">
+        <div class="update-resume-link" id="updateResumeLink">Import</div>
+        
+        <div class="resume-selector">
+            <label for="resumeSelect">Select Resume:</label>
+            <select id="resumeSelect">
+                <option value="">Loading...</option>
+            </select>
+        </div>
+        
         <div class="toggle-group">
             <div class="toggle-container">
                 <span class="toggle-label" id="autoToggleLabel">Auto-Analysis</span>
@@ -346,21 +391,12 @@
             </div>
         </div>
         
-        <div class="my-years-of">My years of experience:</div>
         
-        <div class="year-adjust-container">
-            <button class="year-btn decrease-btn" id="decreaseYear">
-                <img src="images/year_reduce.svg" alt="Decrease" class="year-icon">
-            </button>
-            <div class="year-display" id="yearDisplay">2</div>
-            <button class="year-btn increase-btn" id="increaseYear">
-                <img src="images/year_increase.svg" alt="Increase" class="year-icon">
-            </button>
-        </div>
+        <div class="analyze-btn" id="analyzeButton">Analyze Resume-Job Match</div>
         
-        <div class="analyze-btn" id="analyzeButton">Analyze Jobs</div>
+        <div class="analyze-btn" id="debugButton" style="margin-top: 10px; background-color: #ff6b6b; border-color: #ff6b6b; color: white;">Show Debug Logs</div>
         
-        <div id="statusMessage" class="status-message">Enter your experience and start analysis</div>
+        <div id="statusMessage" class="status-message">Loading resumes...</div>
     </div>
     
     <script src="popup.js"></script>

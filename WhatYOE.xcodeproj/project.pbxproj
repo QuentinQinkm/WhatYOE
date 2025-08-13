@@ -8,8 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		6045B8E6249289520091386F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6045B8E5249289520091386F /* AppDelegate.swift */; };
-		6045B8E9249289520091386F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 6045B8E7249289520091386F /* Main.storyboard */; };
-		6045B8EB249289520091386F /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6045B8EA249289520091386F /* ViewController.swift */; };
 		6045B8ED249289530091386F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6045B8EC249289530091386F /* Assets.xcassets */; };
 		6045B8F4249289530091386F /* WhatYOE Extension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 6045B8F3249289530091386F /* WhatYOE Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		6045B8F9249289530091386F /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6045B8F8249289530091386F /* Cocoa.framework */; };
@@ -18,7 +16,11 @@
 		6045B901249289530091386F /* images in Resources */ = {isa = PBXBuildFile; fileRef = 6045B900249289530091386F /* images */; };
 		6045B903249289530091386F /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 6045B902249289530091386F /* manifest.json */; };
 		6045B905249289530091386F /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = 6045B904249289530091386F /* background.js */; };
-		73C260302492B73A0010603B /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 73C2602F2492B73A0010603B /* README.md */; };
+		BE476B6B2E4BC195002A4D78 /* PromptTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B6A2E4BC195002A4D78 /* PromptTemplates.swift */; };
+		BE476B6C2E4BC195002A4D78 /* AnalysisViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B692E4BC195002A4D78 /* AnalysisViewController.swift */; };
+		BE476B6D2E4BC471002A4D78 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE9CE85A2E4A892F00C8C5D2 /* PDFKit.framework */; };
+		BE476B6E2E4BC195002A4D78 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B6F2E4BC195002A4D78 /* main.swift */; };
+		BE476B702E4BED26002A4D78 /* ResumeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B6F2E4BED26002A4D78 /* ResumeManager.swift */; };
 		BE9C41AA2E43EA9700073E0D /* FoundationModels.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE9C41A92E43EA9700073E0D /* FoundationModels.framework */; };
 		BE9C41B42E44029700073E0D /* popup.html in Resources */ = {isa = PBXBuildFile; fileRef = BE9C41B22E44029700073E0D /* popup.html */; };
 		BE9C41B52E44029700073E0D /* content.js in Resources */ = {isa = PBXBuildFile; fileRef = BE9C41B12E44029700073E0D /* content.js */; };
@@ -51,11 +53,9 @@
 
 /* Begin PBXFileReference section */
 		1E5F69594C5060D1366B1F4E /* LICENSE.txt */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
-		6045B8E1249289520091386F /* WhatYOE.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "WhatYOE.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		6045B8E1249289520091386F /* WhatYOE.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WhatYOE.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6045B8E4249289520091386F /* Native_Messaging_Demo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Native_Messaging_Demo.entitlements; sourceTree = "<group>"; };
 		6045B8E5249289520091386F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		6045B8E8249289520091386F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		6045B8EA249289520091386F /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 		6045B8EC249289530091386F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		6045B8EE249289530091386F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		6045B8F3249289530091386F /* WhatYOE Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "WhatYOE Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -67,12 +67,15 @@
 		6045B904249289530091386F /* background.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = background.js; sourceTree = "<group>"; };
 		6045B90E249289530091386F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		6045B90F249289530091386F /* Native_Messaging_Demo_Extension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Native_Messaging_Demo_Extension.entitlements; sourceTree = "<group>"; };
-		611DBE44889A425219EECEA3 /* SampleCode.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = SampleCode.xcconfig; path = Configuration/SampleCode.xcconfig; sourceTree = "<group>"; };
-		73C2602F2492B73A0010603B /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		BE476B692E4BC195002A4D78 /* AnalysisViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisViewController.swift; sourceTree = "<group>"; };
+		BE476B6A2E4BC195002A4D78 /* PromptTemplates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptTemplates.swift; sourceTree = "<group>"; };
+		BE476B6F2E4BC195002A4D78 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		BE476B6F2E4BED26002A4D78 /* ResumeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResumeManager.swift; sourceTree = "<group>"; };
 		BE9C41A92E43EA9700073E0D /* FoundationModels.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FoundationModels.framework; path = System/Library/Frameworks/FoundationModels.framework; sourceTree = SDKROOT; };
 		BE9C41B12E44029700073E0D /* content.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = content.js; sourceTree = "<group>"; };
 		BE9C41B22E44029700073E0D /* popup.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = popup.html; sourceTree = "<group>"; };
 		BE9C41B32E44029700073E0D /* popup.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = popup.js; sourceTree = "<group>"; };
+		BE9CE85A2E4A892F00C8C5D2 /* PDFKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PDFKit.framework; path = System/Library/Frameworks/PDFKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -80,6 +83,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BE476B6D2E4BC471002A4D78 /* PDFKit.framework in Frameworks */,
 				BE9C41AA2E43EA9700073E0D /* FoundationModels.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -104,23 +108,13 @@
 			path = .;
 			sourceTree = "<group>";
 		};
-		53F68C3FDBB67009FDD0B3DC /* Configuration */ = {
-			isa = PBXGroup;
-			children = (
-				611DBE44889A425219EECEA3 /* SampleCode.xcconfig */,
-			);
-			name = Configuration;
-			sourceTree = "<group>";
-		};
 		6045B8D8249289520091386F = {
 			isa = PBXGroup;
 			children = (
-				73C2602F2492B73A0010603B /* README.md */,
 				6045B8E3249289520091386F /* WhatYOE */,
 				6045B8FA249289530091386F /* WhatYOE Extension */,
 				6045B8F7249289530091386F /* Frameworks */,
 				6045B8E2249289520091386F /* Products */,
-				53F68C3FDBB67009FDD0B3DC /* Configuration */,
 				49FF9C0CC1BD406227C3D473 /* LICENSE */,
 			);
 			sourceTree = "<group>";
@@ -137,19 +131,22 @@
 		6045B8E3249289520091386F /* WhatYOE */ = {
 			isa = PBXGroup;
 			children = (
+				BE476B6F2E4BED26002A4D78 /* ResumeManager.swift */,
+				BE476B6F2E4BC195002A4D78 /* main.swift */,
+				BE476B692E4BC195002A4D78 /* AnalysisViewController.swift */,
+				BE476B6A2E4BC195002A4D78 /* PromptTemplates.swift */,
 				6045B8E4249289520091386F /* Native_Messaging_Demo.entitlements */,
 				6045B8E5249289520091386F /* AppDelegate.swift */,
-				6045B8E7249289520091386F /* Main.storyboard */,
-				6045B8EA249289520091386F /* ViewController.swift */,
 				6045B8EC249289530091386F /* Assets.xcassets */,
 				6045B8EE249289530091386F /* Info.plist */,
 			);
-			path = "WhatYOE";
+			path = WhatYOE;
 			sourceTree = "<group>";
 		};
 		6045B8F7249289530091386F /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				BE9CE85A2E4A892F00C8C5D2 /* PDFKit.framework */,
 				BE9C41A92E43EA9700073E0D /* FoundationModels.framework */,
 				6045B8F8249289530091386F /* Cocoa.framework */,
 			);
@@ -198,8 +195,8 @@
 			dependencies = (
 				6045B8F6249289530091386F /* PBXTargetDependency */,
 			);
-			name = "WhatYOE";
-			productName = "WhatYOE";
+			name = WhatYOE;
+			productName = WhatYOE;
 			productReference = 6045B8E1249289520091386F /* WhatYOE.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -226,7 +223,7 @@
 		6045B8D9249289520091386F /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastSwiftUpdateCheck = 1200;
+				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 1200;
 				ORGANIZATIONNAME = Apple;
 				TargetAttributes = {
@@ -265,9 +262,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				73C260302492B73A0010603B /* README.md in Resources */,
 				6045B8ED249289530091386F /* Assets.xcassets in Resources */,
-				6045B8E9249289520091386F /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -292,7 +287,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6045B8EB249289520091386F /* ViewController.swift in Sources */,
+				BE476B6E2E4BC195002A4D78 /* main.swift in Sources */,
+				BE476B702E4BED26002A4D78 /* ResumeManager.swift in Sources */,
+				BE476B6B2E4BC195002A4D78 /* PromptTemplates.swift in Sources */,
+				BE476B6C2E4BC195002A4D78 /* AnalysisViewController.swift in Sources */,
 				6045B8E6249289520091386F /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -315,21 +313,9 @@
 		};
 /* End PBXTargetDependency section */
 
-/* Begin PBXVariantGroup section */
-		6045B8E7249289520091386F /* Main.storyboard */ = {
-			isa = PBXVariantGroup;
-			children = (
-				6045B8E8249289520091386F /* Base */,
-			);
-			name = Main.storyboard;
-			sourceTree = "<group>";
-		};
-/* End PBXVariantGroup section */
-
 /* Begin XCBuildConfiguration section */
 		6045B910249289530091386F /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 611DBE44889A425219EECEA3 /* SampleCode.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -392,7 +378,6 @@
 		};
 		6045B911249289530091386F /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 611DBE44889A425219EECEA3 /* SampleCode.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -448,13 +433,24 @@
 		};
 		6045B913249289530091386F /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 611DBE44889A425219EECEA3 /* SampleCode.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "WhatYOE Extension/Native_Messaging_Demo_Extension.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = R47YR9KUY4;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = NO;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
 				INFOPLIST_FILE = "WhatYOE Extension/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -462,7 +458,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.example.apple-samplecode.WhatYOE-Extension${SAMPLE_CODE_DISAMBIGUATOR}";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.apple.WhatYOE-Extension";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -472,13 +468,24 @@
 		};
 		6045B914249289530091386F /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 611DBE44889A425219EECEA3 /* SampleCode.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "WhatYOE Extension/Native_Messaging_Demo_Extension.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = R47YR9KUY4;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = NO;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
 				INFOPLIST_FILE = "WhatYOE Extension/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -486,7 +493,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.example.apple-samplecode.WhatYOE-Extension${SAMPLE_CODE_DISAMBIGUATOR}";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.apple.WhatYOE-Extension";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -496,24 +503,35 @@
 		};
 		6045B917249289530091386F /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 611DBE44889A425219EECEA3 /* SampleCode.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "WhatYOE/Native_Messaging_Demo.entitlements";
+				CODE_SIGN_ENTITLEMENTS = WhatYOE/Native_Messaging_Demo.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = R47YR9KUY4;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = NO;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				INFOPLIST_FILE = "WhatYOE/Info.plist";
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				INFOPLIST_FILE = WhatYOE/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.example.apple-samplecode.WhatYOE${SAMPLE_CODE_DISAMBIGUATOR}";
+				PRODUCT_BUNDLE_IDENTIFIER = com.apple.WhatYOE;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;
@@ -522,24 +540,35 @@
 		};
 		6045B918249289530091386F /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 611DBE44889A425219EECEA3 /* SampleCode.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "WhatYOE/Native_Messaging_Demo.entitlements";
+				CODE_SIGN_ENTITLEMENTS = WhatYOE/Native_Messaging_Demo.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = R47YR9KUY4;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = NO;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				INFOPLIST_FILE = "WhatYOE/Info.plist";
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				INFOPLIST_FILE = WhatYOE/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.example.apple-samplecode.WhatYOE${SAMPLE_CODE_DISAMBIGUATOR}";
+				PRODUCT_BUNDLE_IDENTIFIER = com.apple.WhatYOE;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;

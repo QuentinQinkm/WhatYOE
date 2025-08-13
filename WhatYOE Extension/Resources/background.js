@@ -27,22 +27,11 @@ browser.runtime.onMessage.addListener(function(message, sender, sendResponse) {
             const aiAnalysis = response?.aiAnalysis || "No AI response received";
             console.log("🤖 [BACKGROUND] AI Analysis:", aiAnalysis);
             
-            // Check for unspecified responses first, then extract numbers
-            let formattedResult;
-            if (aiAnalysis.toLowerCase().includes('unspecified') || 
-                aiAnalysis.toLowerCase().includes('no specified') ||
-                aiAnalysis.toLowerCase().includes('not specified')) {
-                formattedResult = "Unspecified";
-                console.log("📝 [BACKGROUND] Detected unspecified experience");
-            } else {
-                // Extract number using regex and format as "X Year"
-                const numberMatch = aiAnalysis.match(/\d+/);
-                const extractedNumber = numberMatch ? numberMatch[0] : "0";
-                formattedResult = `${extractedNumber} Year`;
-                console.log("🔢 [BACKGROUND] Extracted number:", extractedNumber);
-            }
+            // The AI response should already be a processed score (0.0-3.0)
+            // from the 4-round evaluation in SafariWebExtensionHandler
+            let formattedResult = aiAnalysis;
             
-            console.log("✨ [BACKGROUND] Formatted result:", formattedResult);
+            console.log("✨ [BACKGROUND] Final result for extension:", formattedResult);
             
             // Send back to content script with formatted response
             sendResponse({
@@ -57,4 +46,3 @@ browser.runtime.onMessage.addListener(function(message, sender, sendResponse) {
         return true; // Keep message channel open for async response
     }
 });
-
