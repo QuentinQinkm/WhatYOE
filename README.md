@@ -2,6 +2,17 @@
 
 A macOS application that analyzes how well a resume matches a job description using Apple's Foundation Models AI.
 
+## ⚠️ Current Status - Development Version
+
+**This version is just for backup**
+
+### Known Issues
+- **App crashes when closing the native app window** - Window management needs fixing
+- **Status label rendering is pending fix/removal** - UI rendering issues with status updates  
+- **Current UI is for test functionality only** - UI/UX is temporary and will be redesigned
+
+> This is a development build focused on implementing the 4-round analysis system. The core functionality works but UI stability and polish are pending.
+
 ## 🏗️ Architecture
 
 **Simplified 2-App System:**
