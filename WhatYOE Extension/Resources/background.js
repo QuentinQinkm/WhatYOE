@@ -16,7 +16,7 @@ browser.runtime.onMessage.addListener(function(message, sender, sendResponse) {
         console.log("📄 [BACKGROUND] Page title:", message.data.title);
         
         // Forward page data to native app for AI analysis
-        browser.runtime.sendNativeMessage("application.id", {
+        browser.runtime.sendNativeMessage("com.kuangming.WhatYOE", {
             message: "pageAnalysis",
             data: message.data
         }, function(response) {

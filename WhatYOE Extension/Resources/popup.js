@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Test native messaging connection
     async function testNativeMessaging() {
         try {
-            const response = await browser.runtime.sendNativeMessage("application.id", {
+            const response = await browser.runtime.sendNativeMessage("com.kuangming.WhatYOE", {
                 message: "ping"
             });
             console.log("✅ Native messaging test successful:", response);
@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         try {
             // Send message to native app handler to launch the standalone resume analyzer
-            const response = await browser.runtime.sendNativeMessage("application.id", {
+            const response = await browser.runtime.sendNativeMessage("com.kuangming.WhatYOE", {
                 message: "launchResumeApp",
                 data: {
                     autoTrigger: true
@@ -235,7 +235,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     async function loadAvailableResumes() {
         try {
-            const response = await browser.runtime.sendNativeMessage("application.id", {
+            const response = await browser.runtime.sendNativeMessage("com.kuangming.WhatYOE", {
                 message: "getAvailableResumes"
             });
             
@@ -279,7 +279,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!resumeId) return;
         
         try {
-            const response = await browser.runtime.sendNativeMessage("application.id", {
+            const response = await browser.runtime.sendNativeMessage("com.kuangming.WhatYOE", {
                 message: "setActiveResume",
                 data: {
                     resumeId: resumeId
@@ -345,7 +345,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     async function showDebugLogs() {
         try {
-            const response = await browser.runtime.sendNativeMessage("application.id", {
+            const response = await browser.runtime.sendNativeMessage("com.kuangming.WhatYOE", {
                 message: "getDebugLogs"
             });
             

@@ -13,7 +13,7 @@ struct ResumeItem: Codable {
 class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     
     // MARK: - Properties
-    private let sharedDefaults = UserDefaults(suiteName: "group.com.apple.WhatYOE.shared") ?? UserDefaults.standard
+    private let sharedDefaults = UserDefaults(suiteName: "group.com.kuangming.WhatYOE.shared") ?? UserDefaults.standard
     private let model = SystemLanguageModel.default
     
     // MARK: - Logging
@@ -77,7 +77,7 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             }
             
             if messageContent == "launchResumeApp" {
-                let bundleIdentifier = "com.apple.WhatYOE"
+                let bundleIdentifier = "com.kuangming.WhatYOE"
                 
                 if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) {
                     let config = NSWorkspace.OpenConfiguration()
@@ -140,7 +140,7 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     }
     
     private func handleLaunchResumeAppRequest(context: NSExtensionContext) {
-        let bundleIdentifier = "com.apple.WhatYOE"
+        let bundleIdentifier = "com.kuangming.WhatYOE"
         
         if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) {
             let config = NSWorkspace.OpenConfiguration()

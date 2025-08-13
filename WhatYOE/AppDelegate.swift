@@ -1,262 +1,172 @@
-/*
-See the LICENSE.txt file for this sample's licensing information.
-
-Abstract:
-Controls the extension's parent app.
-*/
 import Cocoa
 import os.log
 import UniformTypeIdentifiers
-import UserNotifications // Added for UNUserNotificationCenter
+import UserNotifications
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Properties
     private var statusItem: NSStatusItem?
-    private var analysisWindow: NSWindow?
     
     override init() {
         super.init()
-        print("🔧 AppDelegate init called - PRINT STATEMENT")
+        print("🔧 Background Service AppDelegate init called")
     }
     
     func applicationWillFinishLaunching(_ notification: Notification) {
-        print("🚀 applicationWillFinishLaunching called - PRINT STATEMENT")
+        print("🚀 Background Service will finish launching")
+        
+        // ALWAYS run as background service (no dock icon)
+        NSApplication.shared.setActivationPolicy(.accessory)
+        print("✅ Set activation policy to accessory (background service)")
     }
     
     func applicationDidFinishLaunching(_ aNotification: Notification) {
-        print("🚀 WhatYOE Status Bar App launched - PRINT STATEMENT")
-        os_log(.default, "🚀 WhatYOE Status Bar App launched")
+        print("🚀 Background Service launched")
         
         // Set up status bar immediately
-        print("🔧 Setting up status bar... - PRINT STATEMENT")
         setupStatusBar()
         requestNotificationPermissions()
         
-        // Check for command line arguments
-        let arguments = CommandLine.arguments
-        if arguments.contains("--open-resume-tab") {
-            os_log(.default, "📄 Command line argument detected: opening Resume tab")
-            // Delay opening to ensure status bar is set up
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.openAnalysisWindow(selectedTab: 0) // Resume tab
-            }
-        }
-        
-        os_log(.default, "✅ App setup complete - status bar should be visible")
+        print("✅ Background service setup complete")
     }
     
     func applicationWillTerminate(_ aNotification: Notification) {
-        os_log(.default, "🛑 WhatYOE Status Bar App terminating")
+        print("🛑 Background Service terminating")
     }
     
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        // Never terminate - always keep running as background service
+        return false
+    }
+    
+    // MARK: - Status Bar Setup
+    
     private func setupStatusBar() {
-        print("🔧 Setting up status bar... - PRINT STATEMENT")
-        os_log(.default, "🔧 Setting up status bar...")
+        print("🔧 Setting up status bar...")
         
         // Create status bar item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
-        // Verify status bar item was created
         guard let statusItem = statusItem else {
-            print("❌ Failed to create status bar item - PRINT STATEMENT")
-            os_log(.error, "❌ Failed to create status bar item")
+            print("❌ Failed to create status bar item")
             return
         }
-        
-        print("✅ Status bar item created - PRINT STATEMENT")
-        os_log(.default, "✅ Status bar item created")
         
         // Set status bar icon
         if let button = statusItem.button {
             button.title = "📊"
             button.font = NSFont.systemFont(ofSize: 16)
-            print("✅ Status bar button configured - PRINT STATEMENT")
-            os_log(.default, "✅ Status bar button configured")
-        } else {
-            print("❌ Status bar button is nil - PRINT STATEMENT")
-            os_log(.error, "❌ Status bar button is nil")
-            return
+            button.toolTip = "WhatYOE Background Service"
+            button.action = #selector(statusBarClicked)
+            button.target = self
         }
         
-        // Create and configure menu
+        // Create menu
         let statusMenu = NSMenu()
         
-        // Local Analysis menu item
-        let localAnalysisItem = NSMenuItem(title: "Local Analysis", action: #selector(openLocalAnalysis), keyEquivalent: "")
-        localAnalysisItem.target = self
-        statusMenu.addItem(localAnalysisItem)
+        // Open Desktop Interface
+        let desktopItem = NSMenuItem(title: "Open Desktop Interface", action: #selector(openDesktopInterface), keyEquivalent: "")
+        desktopItem.target = self
+        statusMenu.addItem(desktopItem)
         
-        // Import Resume menu item
-        let importResumeItem = NSMenuItem(title: "Import", action: #selector(openResumeTab), keyEquivalent: "")
-        importResumeItem.target = self
-        statusMenu.addItem(importResumeItem)
+        // Safari Extension Status
+        let safariItem = NSMenuItem(title: "Safari Extension: Active", action: nil, keyEquivalent: "")
+        safariItem.isEnabled = false
+        statusMenu.addItem(safariItem)
         
-        // Separator
         statusMenu.addItem(NSMenuItem.separator())
         
-        // Hide Main Window menu item
-        let hideWindowItem = NSMenuItem(title: "Hide Main Window", action: #selector(hideMainWindow), keyEquivalent: "")
-        hideWindowItem.target = self
-        statusMenu.addItem(hideWindowItem)
-        
-        // Separator
-        statusMenu.addItem(NSMenuItem.separator())
-        
-        // Exit menu item
-        let exitItem = NSMenuItem(title: "Exit", action: #selector(exitApp), keyEquivalent: "")
+        // Quit
+        let exitItem = NSMenuItem(title: "Quit Background Service", action: #selector(exitApp), keyEquivalent: "")
         exitItem.target = self
         statusMenu.addItem(exitItem)
         
-        // Set the menu
         statusItem.menu = statusMenu
-        
-        os_log(.default, "✅ Status bar menu configured")
-        os_log(.default, "🎯 Status bar setup complete")
+        print("✅ Status bar setup complete")
     }
     
-    @objc private func openLocalAnalysis() {
-        print("🔍 openLocalAnalysis called - PRINT STATEMENT")
-        os_log(.default, "📊 Opening Local Analysis")
-        
-        openAnalysisWindow(selectedTab: 1) // Local Analysis tab
+    // MARK: - Actions
+    
+    @objc private func statusBarClicked() {
+        print("📊 Status bar clicked - opening desktop interface")
+        openDesktopInterface()
     }
     
-    @objc private func openResumeTab() {
-        print("🔍 openResumeTab called - PRINT STATEMENT")
-        os_log(.default, "📄 Opening Resume tab")
+    @objc private func openDesktopInterface() {
+        print("🖥️ Launching desktop interface...")
         
-        openAnalysisWindow(selectedTab: 0) // Resume tab
-    }
-    
-    private func openAnalysisWindow(selectedTab: Int) {
-        // Create and show the analysis window
-        if analysisWindow == nil {
-            print("🔧 Creating new analysis window - PRINT STATEMENT")
-            createAnalysisWindow()
-        } else {
-            print("🔧 Using existing analysis window - PRINT STATEMENT")
-        }
+        // Launch desktop app as separate process
+        let desktopAppURL = getDesktopAppURL()
         
-        // Set the selected tab
-        if let viewController = analysisWindow?.contentViewController as? AnalysisViewController {
-            viewController.selectTab(selectedTab)
-        }
-        
-        // Temporarily change activation policy to show window
-        NSApplication.shared.setActivationPolicy(.regular)
-        
-        analysisWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-        
-        print("✅ Analysis window should be visible now - PRINT STATEMENT")
-    }
-    
-    @objc private func importResume() {
-        os_log(.default, "📄 Import Resume requested")
-        
-        // Auto-open file picker
-        let openPanel = NSOpenPanel()
-        openPanel.allowedContentTypes = [.pdf]
-        openPanel.allowsMultipleSelection = false
-        openPanel.title = "Select Resume PDF"
-        openPanel.message = "Choose your resume PDF file to import"
-        
-        openPanel.begin { [weak self] result in
-            if result == .OK, let url = openPanel.url {
-                self?.handleResumeImport(url: url)
+        if let url = desktopAppURL {
+            Task {
+                do {
+                    let config = NSWorkspace.OpenConfiguration()
+                    _ = try await NSWorkspace.shared.openApplication(at: url, configuration: config)
+                    print("✅ Desktop app launched successfully")
+                } catch {
+                    print("❌ Failed to launch desktop app: \(error.localizedDescription)")
+                    self.showNotification(title: "Launch Error", message: "Could not launch desktop interface")
+                }
             }
+        } else {
+            print("❌ Desktop app not found")
+            showNotification(title: "Not Found", message: "Desktop app not found. Please build both targets.")
         }
     }
     
     @objc private func exitApp() {
-        os_log(.default, "🚪 Exit requested")
+        print("🚪 Exit requested")
         NSApplication.shared.terminate(nil)
     }
     
-    @objc private func hideMainWindow() {
-        os_log(.default, "🔄 Hiding main window and switching to accessory mode")
+    // MARK: - Helper Methods
+    
+    private func getDesktopAppURL() -> URL? {
+        // Look for desktop app in the same bundle directory
+        let currentAppURL = Bundle.main.bundleURL
+        let desktopAppName = "WhatYOE-Desktop.app"
+        let desktopAppURL = currentAppURL.deletingLastPathComponent().appendingPathComponent(desktopAppName)
         
-        // Hide any remaining windows
-        NSApplication.shared.windows.forEach { window in
-            window.orderOut(nil)
+        // Check if desktop app exists
+        if FileManager.default.fileExists(atPath: desktopAppURL.path) {
+            return desktopAppURL
         }
         
-        // Switch to accessory mode
-        NSApplication.shared.setActivationPolicy(.accessory)
-        os_log(.default, "✅ Switched to accessory mode")
-    }
-    
-    private func createAnalysisWindow() {
-        print("🔧 createAnalysisWindow called - PRINT STATEMENT")
-        
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
-            backing: .buffered,
-            defer: false
-        )
-        
-        window.title = "WhatYOE - Resume Analysis"
-        window.center()
-        window.delegate = self
-        
-        let viewController = AnalysisViewController()
-        window.contentViewController = viewController
-        
-        analysisWindow = window
-        
-        print("✅ Analysis window created successfully - PRINT STATEMENT")
-    }
-    
-    private func handleResumeImport(url: URL) {
-        os_log(.default, "📄 Resume imported: %@", url.lastPathComponent)
-        
-        // Store the file path for now - the actual cleaning will happen in the analysis window
-        UserDefaults.standard.set(url.path, forKey: "lastImportedResumePath")
-        
-        // Show success notification using modern notification system
-        let content = UNMutableNotificationContent()
-        content.title = "Resume Imported"
-        content.body = "Resume has been imported successfully. Open Local Analysis to process it."
-        content.sound = UNNotificationSound.default
-        
-        let request = UNNotificationRequest(identifier: "resume-imported", content: content, trigger: nil)
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                os_log(.error, "Failed to show notification: %@", error.localizedDescription)
+        // Fallback: try to find in Applications folder
+        let applicationsURL = FileManager.default.urls(for: .applicationDirectory, in: .localDomainMask).first
+        if let appsURL = applicationsURL {
+            let fallbackURL = appsURL.appendingPathComponent(desktopAppName)
+            if FileManager.default.fileExists(atPath: fallbackURL.path) {
+                return fallbackURL
             }
         }
-    }
-    
-    // Function to get cleaned resume data for the extension
-    func getCleanedResumeData() -> String {
-        if let resumeData = UserDefaults.standard.string(forKey: "cleanedResumeData"), 
-           !resumeData.isEmpty {
-            return resumeData
-        }
-        return "No cleaned resume data available. Please run analysis first."
+        
+        return nil
     }
     
     private func requestNotificationPermissions() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
             if granted {
-                os_log(.default, "✅ Notification permissions granted")
+                print("✅ Notification permissions granted")
             } else if let error = error {
-                os_log(.error, "❌ Notification permissions denied: %@", error.localizedDescription)
+                print("❌ Notification permissions denied: \(error.localizedDescription)")
             }
         }
     }
-}
-
-// MARK: - NSWindowDelegate
-extension AppDelegate: NSWindowDelegate {
-    func windowWillClose(_ notification: Notification) {
-        // Don't quit the app when the analysis window is closed
-        // Just hide it and change activation policy back to accessory
-        if let window = notification.object as? NSWindow, window == analysisWindow {
-            analysisWindow = nil
-            NSApplication.shared.setActivationPolicy(.accessory)
+    
+    private func showNotification(title: String, message: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = message
+        content.sound = UNNotificationSound.default
+        
+        let request = UNNotificationRequest(identifier: "notification", content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("❌ Failed to show notification: \(error.localizedDescription)")
+            }
         }
     }
 }
