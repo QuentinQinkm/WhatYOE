@@ -1,5 +1,10 @@
 # WhatYOE - Resume-Job Match Analyzer
 
+Aug 12
+
+Aug 13:
+Reconstruct the app into three targets: WhatYOE background serve, WhatYOE Desktop Interface (pending fix for proper resume mangement), WhatYOE safari extension (Pending fix for correct label render)
+
 A macOS application that analyzes how well a resume matches a job description using Apple's Foundation Models AI.
 
 ## ⚠️ Current Status - Development Version
