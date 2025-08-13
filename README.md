@@ -13,6 +13,20 @@ A macOS application that analyzes how well a resume matches a job description us
 
 > This is a development build focused on implementing the 4-round analysis system. The core functionality works but UI stability and polish are pending.
 
+### What's Updated in This Version
+- **Enhanced Analysis System**: Replaced single years-of-experience extraction with comprehensive 4-scope evaluation
+  - Years of Experience evaluation
+  - Education assessment
+  - Technical Skills analysis  
+  - Relevant Experience evaluation
+- **New Scoring System**: Implemented 0-3 scoring scale for each evaluation scope
+  - Fit Score (0-3): How well candidate matches requirements
+  - Gap Score (0-3): Areas needing improvement (higher = better)
+- **Resume Import & Manager System**: Added complete resume management functionality
+  - PDF import with text extraction
+  - Resume storage and selection system
+  - Active resume switching for analysis
+
 ## 🏗️ Architecture
 
 **Simplified 2-App System:**
