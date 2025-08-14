@@ -375,9 +375,12 @@
         
         <div class="resume-selector">
             <label for="resumeSelect">Select Resume:</label>
-            <select id="resumeSelect">
-                <option value="">Loading...</option>
-            </select>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <select id="resumeSelect">
+                    <option value="">Loading...</option>
+                </select>
+                <button id="refreshResumesBtn" style="padding: 8px 12px; border: 1px solid #ccc; background: white; cursor: pointer; font-size: 12px;">↻</button>
+            </div>
         </div>
         
         <div class="toggle-group">
@@ -393,8 +396,6 @@
         
         
         <div class="analyze-btn" id="analyzeButton">Analyze Resume-Job Match</div>
-        
-        <div class="analyze-btn" id="debugButton" style="margin-top: 10px; background-color: #ff6b6b; border-color: #ff6b6b; color: white;">Show Debug Logs</div>
         
         <div id="statusMessage" class="status-message">Loading resumes...</div>
     </div>

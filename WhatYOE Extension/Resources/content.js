@@ -51,32 +51,36 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
         }
 
         applyHighlight(card, result) {
-            // Clear previous styles first
+            // Clear previous styles and all labels first
             card.style.position = ''; // Reset position
             card.querySelector('.yoe-ai-label')?.remove();
+            card.querySelector('.yoe-progress-label')?.remove(); // Clear progress label too
 
-            // Determine color and text for the label based on AI score
+            // Determine color and text for the label based on AI score (0-3 scale)
             let text, color;
             if (typeof result.score === 'number') {
-                if (result.score <= 1.0) {
-                    text = `Reject: ${result.score}`;
+                if (result.score === 0) {
+                    text = `Poor: ${result.score}`;
                     color = '#dc3545'; // Red
-                } else if (result.score <= 2.0) {
-                    text = `Low: ${result.score}`;
+                } else if (result.score === 1) {
+                    text = `Fair: ${result.score}`;
                     color = '#fd7e14'; // Orange
-                } else if (result.score <= 2.5) {
-                    text = `Maybe: ${result.score}`;
+                } else if (result.score === 2) {
+                    text = `Good: ${result.score}`;
                     color = '#ffc107'; // Yellow
-                } else {
-                    text = `High: ${result.score}`;
+                } else if (result.score === 3) {
+                    text = `Strong: ${result.score}`;
                     color = '#28a745'; // Green
+                } else {
+                    text = 'Unknown';
+                    color = '#6c757d'; // Gray
                 }
             } else {
                 text = 'Unknown';
                 color = '#6c757d'; // Gray
             }
 
-            // Create and style the label (exactly like old working version)
+            // Create and style the label
             const label = document.createElement('div');
             label.className = 'yoe-ai-label';
             label.textContent = text;
@@ -94,14 +98,14 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
                 font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             `;
 
-            // Add label to card without colored border (exactly like old version)
+            // Add label to card
             card.style.position = 'relative';
             card.appendChild(label);
             
-            console.log(`[YOE AI] Applied label "${text}" to card (no border).`);
+            console.log(`[YOE AI] Applied final label "${text}" to card.`);
         }
         
-        // NEW: Apply progress labels during analysis
+        // Simple progress label for phases
         applyProgressLabel(card, message, color = '#6c757d') {
             // Clear previous progress label
             card.querySelector('.yoe-progress-label')?.remove();
@@ -127,58 +131,6 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
             // Add label to card
             card.style.position = 'relative';
             card.appendChild(label);
-            
-            console.log(`[YOE AI] Applied progress label: "${message}"`);
-        }
-        
-        // NEW: Set up progress monitoring for a job card
-        setupProgressMonitoring(card) {
-            // Poll for progress updates every 500ms
-            const progressInterval = setInterval(() => {
-                browser.runtime.sendMessage({
-                    action: "getProgress"
-                }, (response) => {
-                    if (response && response.type === "progress_update") {
-                        // Update the progress label based on stage
-                        let progressText, color;
-                        
-                        switch(response.stage) {
-                            case "parsing_jd":
-                                progressText = "Parsing JD";
-                                color = "#17a2b8"; // Blue
-                                break;
-                            case "round_1":
-                                progressText = "Phase 1: YOE";
-                                color = "#6f42c1"; // Purple
-                                break;
-                            case "round_2":
-                                progressText = "Phase 2: Education";
-                                color = "#fd7e14"; // Orange
-                                break;
-                            case "round_3":
-                                progressText = "Phase 3: Skills";
-                                color = "#e83e8c"; // Pink
-                                break;
-                            case "round_4":
-                                progressText = "Phase 4: Experience";
-                                color = "#20c997"; // Teal
-                                break;
-                            case "final_score":
-                                progressText = "Final Score";
-                                color = "#28a745"; // Green
-                                break;
-                            default:
-                                progressText = response.message;
-                                color = "#6c757d"; // Gray
-                        }
-                        
-                        this.applyProgressLabel(card, progressText, color);
-                    }
-                });
-            }, 500);
-            
-            // Store interval ID to clear later
-            card.progressInterval = progressInterval;
         }
 
         cleanText(text) {
@@ -187,6 +139,44 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
                 .map(line => line.trim())
                 .filter(line => line.length > 0)
                 .join('\n');
+        }
+        
+        async runSingleRequestAnalysis(description, card) {
+            try {
+                // Show analyzing status
+                this.applyProgressLabel(card, "Analyzing...", "#6c757d");
+                
+                // Single request for 4-cycle analysis
+                const analysisResult = await browser.runtime.sendMessage({
+                    action: "startFourCycleAnalysis",
+                    data: {
+                        pageText: description,
+                        characterCount: description.length,
+                        wordCount: description.trim().split(/\s+/).filter(word => word.length > 0).length,
+                        title: document.title,
+                        url: window.location.href,
+                        timestamp: Date.now()
+                    }
+                });
+                
+                // Don't show "Analysis Complete" - let the final score label replace the progress label
+                
+                // Return result
+                return {
+                    success: true,
+                    aiAnalysis: analysisResult?.result?.aiAnalysis || "0.0",
+                    analysisResult: analysisResult
+                };
+                
+            } catch (error) {
+                console.error('❌ Single request analysis failed:', error);
+                this.applyProgressLabel(card, "Analysis Failed", "#dc3545");
+                return {
+                    success: false,
+                    aiAnalysis: "0.0",
+                    error: error.message
+                };
+            }
         }
 
         async getVerifiedJobDescription(card) {
@@ -304,40 +294,16 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
                             const description = await this.getVerifiedJobDescription(card);
                             console.log(`🔍 [YOE AI] Got description for ${jobId}, sending to AI...`);
                             
-                            // Show "Analyzing..." status
-                            this.applyProgressLabel(card, "Analyzing...", "#6c757d");
-                            
-                            // Set up progress monitoring
-                            this.setupProgressMonitoring(card);
-                            
-                            // Send to AI for analysis
-                            const response = await new Promise((resolve) => {
-                                browser.runtime.sendMessage({
-                                    action: "sendPageData",
-                                    data: {
-                                        pageText: description,
-                                        characterCount: description.length,
-                                        wordCount: description.trim().split(/\s+/).filter(word => word.length > 0).length,
-                                        foundSelector: "job-description",
-                                        title: document.title,
-                                        url: window.location.href,
-                                        timestamp: Date.now()
-                                    }
-                                }, resolve);
-                            });
+                            // Single request 4-cycle analysis
+                            const response = await this.runSingleRequestAnalysis(description, card);
 
-                                                    // Parse score from AI response
+                        // Parse score from AI response
                         const aiAnalysis = response?.aiAnalysis || "0.0";
-                        // The score is already processed, just convert to number
-                        const score = parseFloat(aiAnalysis) || 0;
+                        // Convert decimal score to 0-3 integer scale
+                        const decimalScore = parseFloat(aiAnalysis) || 0;
+                        const score = Math.round(decimalScore);
                         
                         console.log(`🤖 [YOE AI] AI returned: "${aiAnalysis}" → score: ${score}`);
-                        
-                        // Clean up progress monitoring
-                        if (card.progressInterval) {
-                            clearInterval(card.progressInterval);
-                            delete card.progressInterval;
-                        }
                         
                         // Apply label to job card
                         if (score >= 0 && score <= 3) {
@@ -405,26 +371,26 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
         getStats() {
             let stats = { 
                 totalJobs: 0, 
-                reject: 0,
-                low: 0,
-                maybe: 0,
-                high: 0,
+                poor: 0,
+                fair: 0,
+                good: 0,
+                strong: 0,
                 isAnalyzing: this.isAnalyzing 
             };
             
             this.analysisResults.forEach(result => {
                 stats.totalJobs++;
                 
-                // Only process valid numerical scores
+                // Only process valid numerical scores (0-3 scale)
                 if (typeof result.score === 'number') {
-                    if (result.score <= 1.0) {
-                        stats.reject++;
-                    } else if (result.score <= 2.0) {
-                        stats.low++;
-                    } else if (result.score <= 2.5) {
-                        stats.maybe++;
-                    } else {
-                        stats.high++;
+                    if (result.score === 0) {
+                        stats.poor++;
+                    } else if (result.score === 1) {
+                        stats.fair++;
+                    } else if (result.score === 2) {
+                        stats.good++;
+                    } else if (result.score === 3) {
+                        stats.strong++;
                     }
                 }
             });
@@ -435,12 +401,32 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
         checkForJobDescription() {
             // Check if we're on a job details page with a proper job description
             const detailsWrapper = document.querySelector('.jobs-search__job-details-wrapper, .jobs-search__right-rail, .scaffold-layout__detail');
+            
             if (detailsWrapper) {
                 const descriptionEl = detailsWrapper.querySelector('.jobs-description__content, .jobs-box__html-content');
+                
                 if (descriptionEl && descriptionEl.innerText.trim().length > 50) {
                     return true;
                 }
+            } else {
+                // Try alternative selectors
+                const alternativeSelectors = [
+                    '.jobs-description__content',
+                    '.jobs-box__html-content',
+                    '.jobs-description',
+                    '.jobs-box__html-content',
+                    '[data-job-description]',
+                    '.job-description'
+                ];
+                
+                for (const selector of alternativeSelectors) {
+                    const element = document.querySelector(selector);
+                    if (element && element.innerText.trim().length > 50) {
+                        return true;
+                    }
+                }
             }
+            
             return false;
         }
     }
@@ -467,7 +453,8 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
         }
         
         if (message.action === 'getStats') {
-            sendResponse(window.yoeAI.getStats());
+            const stats = window.yoeAI.getStats();
+            sendResponse(stats);
             return true;
         }
         

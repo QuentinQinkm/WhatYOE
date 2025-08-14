@@ -10,11 +10,25 @@ struct ResumeItem: Codable {
     let dateCreated: Date
 }
 
+// MARK: - Safari Analysis Communication
+struct SafariAnalysisRequest: Codable {
+    let id: String
+    let resumeText: String
+    let jobDescription: String
+    let timestamp: Date
+}
+
+struct SafariAnalysisResponse: Codable {
+    let requestId: String
+    let results: String?
+    let error: String?
+    let timestamp: Date
+}
+
 class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     
-    // MARK: - Properties
+    // MARK: - Properties  
     private let sharedDefaults = UserDefaults(suiteName: "group.com.kuangming.WhatYOE.shared") ?? UserDefaults.standard
-    private let model = SystemLanguageModel.default
     
     // MARK: - Logging
     private func log(_ message: String) {
@@ -42,19 +56,59 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         if let messageDict = message as? [String: Any],
            let messageContent = messageDict["message"] as? String {
             
-            // Handle page analysis (main functionality)
-            if messageContent == "pageAnalysis" {
+            
+            // Handle single request 4-cycle analysis (new optimized approach)
+            if messageContent == "fourCycleAnalysis" {
                 if let data = messageDict["data"] as? [String: Any] {
                     let characterCount = data["characterCount"] as? Int ?? 0
                     let wordCount = data["wordCount"] as? Int ?? 0
-                    let _ = data["title"] as? String ?? "Unknown"
                     let pageText = data["pageText"] as? String ?? ""
                     
-                    log("📊 PAGE_ANALYSIS: Starting analysis - \(wordCount) words, \(characterCount) characters")
+                    log("🚀 FOUR_CYCLE_ANALYSIS: Starting single request 4-cycle analysis - \(wordCount) words, \(characterCount) characters")
                     
-                    // Analyze with Foundation Model
-                    analyzeJobDescription(pageText: pageText, context: context)
-                    return // Don't send immediate response, wait for AI analysis
+                    analyzeFourCycleJobDescription(pageText: pageText, context: context)
+                    return
+                }
+            }
+            
+            // Handle sequential phase analysis
+            if messageContent == "phase1Analysis" {
+                if let data = messageDict["data"] as? [String: Any] {
+                    let pageText = data["pageText"] as? String ?? ""
+                    log("🚀 PHASE1: Starting YOE Analysis")
+                    setProgress(stage: "round_1", message: "Phase 1: YOE Analysis")
+                    analyzeJobDescriptionPhase1(pageText: pageText, context: context)
+                    return
+                }
+            }
+            
+            if messageContent == "phase2Analysis" {
+                if let data = messageDict["data"] as? [String: Any] {
+                    let pageText = data["pageText"] as? String ?? ""
+                    log("🚀 PHASE2: Starting Education Analysis")
+                    setProgress(stage: "round_2", message: "Phase 2: Education Analysis")
+                    analyzeJobDescriptionPhase2(pageText: pageText, context: context)
+                    return
+                }
+            }
+            
+            if messageContent == "phase3Analysis" {
+                if let data = messageDict["data"] as? [String: Any] {
+                    let pageText = data["pageText"] as? String ?? ""
+                    log("🚀 PHASE3: Starting Skills Analysis")
+                    setProgress(stage: "round_3", message: "Phase 3: Skills Analysis")
+                    analyzeJobDescriptionPhase3(pageText: pageText, context: context)
+                    return
+                }
+            }
+            
+            if messageContent == "phase4Analysis" {
+                if let data = messageDict["data"] as? [String: Any] {
+                    let pageText = data["pageText"] as? String ?? ""
+                    log("🚀 PHASE4: Starting Experience Analysis")
+                    setProgress(stage: "round_4", message: "Phase 4: Experience Analysis")
+                    analyzeJobDescriptionPhase4(pageText: pageText, context: context)
+                    return
                 }
             }
             
@@ -157,52 +211,257 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         }
     }
     
-    private func handlePageAnalysisRequest(message: [String: Any], context: NSExtensionContext) {
-        guard let data = message["data"] as? [String: Any],
-              let pageText = data["pageText"] as? String else {
-            log("❌ Missing page data")
-            sendResponse(["status": "error", "message": "Missing page data"], context: context)
-            return
-        }
-        
-        let wordCount = data["wordCount"] as? Int ?? 0
-        log("🎯 Starting analysis: \(wordCount) words")
-        
-        analyzeJobDescription(pageText: pageText, context: context)
-    }
     
     // MARK: - Analysis
-    private func analyzeJobDescription(pageText: String, context: NSExtensionContext) {
-        // Check if models are available
-        guard case .available = model.availability else {
-            log("⚠️ Foundation Models not available")
-            sendFinalResponse(score: "0.0", rawScore: "0", context: context)
-            return
-        }
-        
+    
+    // New optimized single request 4-cycle analysis
+    private func analyzeFourCycleJobDescription(pageText: String, context: NSExtensionContext) {
         Task {
             do {
                 let resumeData = getCleanedResumeData()
                 
-                // Step 1: Clean job description
-                log("💾 Progress: parsing_jd - Parsing job description...")
-                let cleanedJob = try await cleanJobDescription(pageText)
+                log("🔄 Starting single request 4-cycle analysis via background server...")
                 
-                // Step 2: 4-round evaluation
-                let evaluationResult = try await performEvaluation(resume: resumeData, job: cleanedJob)
+                // Send analysis request to background server with fourRun method
+                let results = try await requestFourCycleAnalysisFromBackgroundServer(
+                    resumeText: resumeData,
+                    jobDescription: pageText
+                )
                 
-                // Step 3: Final score
-                log("💾 Progress: final_score - Calculating final score...")
-                let (rawScore, processedScore) = extractScore(from: evaluationResult)
+                // Extract combined score from 4-cycle analysis results  
+                let (rawScore, processedScore) = extractFourCycleScore(from: results)
                 
-                log("✅ Analysis complete: \(processedScore)")
-                sendFinalResponse(score: processedScore, rawScore: rawScore, context: context)
+                log("✅ 4-Cycle analysis complete: \(processedScore)")
+                sendFinalResponseWithScores(score: processedScore, rawScore: rawScore, context: context)
                 
             } catch {
-                log("❌ Analysis failed: \(error)")
+                log("❌ 4-Cycle analysis failed: \(error)")
                 sendFinalResponse(score: "0.0", rawScore: "0", context: context)
             }
         }
+    }
+    
+    
+    // MARK: - Phase Analysis Functions
+    private func analyzeJobDescriptionPhase1(pageText: String, context: NSExtensionContext) {
+        Task {
+            do {
+                let resumeData = getCleanedResumeData()
+                let analysisMethod = getAnalysisMethodFromSharedDefaults()
+                
+                log("🔄 Phase 1: Starting YOE Analysis using \(analysisMethod) method...")
+                
+                // Send request to WhatYOE - let it handle all prompt logic
+                let results = try await requestAnalysisFromWhatYOE(
+                    resumeText: resumeData,
+                    jobDescription: pageText,
+                    phase: "phase1"
+                )
+                
+                // Extract YOE score from results (0-3 scale)
+                let score = extractPhaseScore(from: results, phase: "YOE")
+                
+                log("✅ Phase 1 complete: \(score)")
+                setProgress(stage: "round_1", message: "Phase 1 Complete: \(score)")
+                
+                // Send response for Phase 1
+                sendPhaseResponse(phase: "phase1", score: score, rawScore: score, context: context)
+                
+            } catch {
+                log("❌ Phase 1 failed: \(error)")
+                sendPhaseResponse(phase: "phase1", score: "0", rawScore: "0", context: context)
+            }
+        }
+    }
+    
+    private func analyzeJobDescriptionPhase2(pageText: String, context: NSExtensionContext) {
+        Task {
+            do {
+                let resumeData = getCleanedResumeData()
+                let analysisMethod = getAnalysisMethodFromSharedDefaults()
+                
+                log("🔄 Phase 2: Starting Education Analysis using \(analysisMethod) method...")
+                
+                // Send request to WhatYOE - let it handle all prompt logic
+                let results = try await requestAnalysisFromWhatYOE(
+                    resumeText: resumeData,
+                    jobDescription: pageText,
+                    phase: "phase2"
+                )
+                
+                // Extract Education score from results (0-3 scale)
+                let score = extractPhaseScore(from: results, phase: "Education")
+                
+                log("✅ Phase 2 complete: \(score)")
+                setProgress(stage: "round_2", message: "Phase 2 Complete: \(score)")
+                
+                // Send response for Phase 2
+                sendPhaseResponse(phase: "phase2", score: score, rawScore: score, context: context)
+                
+            } catch {
+                log("❌ Phase 2 failed: \(error)")
+                sendPhaseResponse(phase: "phase2", score: "0", rawScore: "0", context: context)
+            }
+        }
+    }
+    
+    private func analyzeJobDescriptionPhase3(pageText: String, context: NSExtensionContext) {
+        Task {
+            do {
+                let resumeData = getCleanedResumeData()
+                let analysisMethod = getAnalysisMethodFromSharedDefaults()
+                
+                log("🔄 Phase 3: Starting Skills Analysis using \(analysisMethod) method...")
+                
+                // Send request to WhatYOE - let it handle all prompt logic
+                let results = try await requestAnalysisFromWhatYOE(
+                    resumeText: resumeData,
+                    jobDescription: pageText,
+                    phase: "phase3"
+                )
+                
+                // Extract Skills score from results (0-3 scale)
+                let score = extractPhaseScore(from: results, phase: "Technical Skills")
+                
+                log("✅ Phase 3 complete: \(score)")
+                setProgress(stage: "round_3", message: "Phase 3 Complete: \(score)")
+                
+                // Send response for Phase 3
+                sendPhaseResponse(phase: "phase3", score: score, rawScore: score, context: context)
+                
+            } catch {
+                log("❌ Phase 3 failed: \(error)")
+                sendPhaseResponse(phase: "phase3", score: "0", rawScore: "0", context: context)
+            }
+        }
+    }
+    
+    private func analyzeJobDescriptionPhase4(pageText: String, context: NSExtensionContext) {
+        Task {
+            do {
+                let resumeData = getCleanedResumeData()
+                let analysisMethod = getAnalysisMethodFromSharedDefaults()
+                
+                log("🔄 Phase 4: Starting Experience Analysis using \(analysisMethod) method...")
+                
+                // Send request to WhatYOE - let it handle all prompt logic
+                let results = try await requestAnalysisFromWhatYOE(
+                    resumeText: resumeData,
+                    jobDescription: pageText,
+                    phase: "phase4"
+                )
+                
+                // Extract Experience score from results (0-3 scale)
+                let score = extractPhaseScore(from: results, phase: "Relevant Experience")
+                
+                log("✅ Phase 4 complete: \(score)")
+                setProgress(stage: "final_score", message: "Final Score: \(score)")
+                
+                // Send response for Phase 4
+                sendPhaseResponse(phase: "phase4", score: score, rawScore: score, context: context)
+                
+            } catch {
+                log("❌ Phase 4 failed: \(error)")
+                sendPhaseResponse(phase: "phase4", score: "0", rawScore: "0", context: context)
+            }
+        }
+    }
+    
+    
+    private func requestFourCycleAnalysisFromBackgroundServer(resumeText: String, jobDescription: String) async throws -> String {
+        // Create analysis request
+        let request = SafariAnalysisRequest(
+            id: UUID().uuidString,
+            resumeText: resumeText,
+            jobDescription: jobDescription,
+            timestamp: Date()
+        )
+        
+        // Store request in shared defaults with fourRun method specified
+        if let requestData = try? JSONEncoder().encode(request) {
+            sharedDefaults.set(requestData, forKey: "safariAnalysisRequest")
+            sharedDefaults.set("fourRun", forKey: "analysisMethod") // Ensure 4-cycle method
+            sharedDefaults.set("pending", forKey: "safariAnalysisStatus")
+        }
+        
+        // Wait for response with timeout
+        return try await waitForAnalysisResponse(requestId: request.id)
+    }
+    
+    // MARK: - Analysis Method Handling
+    
+    private func getAnalysisMethodFromSharedDefaults() -> String {
+        return sharedDefaults.string(forKey: "analysisMethod") ?? "fourRun"
+    }
+    
+    private func requestAnalysisFromWhatYOE(resumeText: String, jobDescription: String, phase: String) async throws -> String {
+        // Create analysis request - let WhatYOE handle all prompt logic
+        let request = SafariAnalysisRequest(
+            id: UUID().uuidString,
+            resumeText: resumeText,
+            jobDescription: jobDescription,
+            timestamp: Date()
+        )
+        
+        // Store request in shared defaults
+        if let requestData = try? JSONEncoder().encode(request) {
+            sharedDefaults.set(requestData, forKey: "safariAnalysisRequest")
+            sharedDefaults.set("pending", forKey: "safariAnalysisStatus")
+        }
+        
+        // Wait for response with timeout
+        return try await waitForAnalysisResponse(requestId: request.id)
+    }
+    
+    private func extractPhaseScore(from response: String, phase: String) -> String {
+        // Look for Fit Score in the response (0-3 scale)
+        if let match = response.range(of: #"Fit Score:\s*(\d+)"#, options: .regularExpression),
+           let scoreText = response[match].split(separator: ":").last,
+           let score = Int(scoreText.trimmingCharacters(in: .whitespaces)) {
+            return String(score)
+        }
+        
+        // Fallback: look for any number 0-3 in the response
+        if let match = response.range(of: #"\b([0-3])\b"#, options: .regularExpression),
+           let scoreText = response[match].split(separator: " ").last,
+           let score = Int(scoreText) {
+            return String(score)
+        }
+        
+        log("⚠️ Could not extract score for \(phase), defaulting to 0")
+        return "0"
+    }
+    
+    // MARK: - Analysis Method Handling
+    
+    private func waitForAnalysisResponse(requestId: String) async throws -> String {
+        let maxWaitTime: TimeInterval = 60.0 // 60 seconds timeout
+        let checkInterval: TimeInterval = 0.5 // Check every 500ms
+        let startTime = Date()
+        
+        while Date().timeIntervalSince(startTime) < maxWaitTime {
+            // Check if response is ready
+            if let responseData = sharedDefaults.data(forKey: "safariAnalysisResponse"),
+               let response = try? JSONDecoder().decode(SafariAnalysisResponse.self, from: responseData),
+               response.requestId == requestId {
+                
+                // Clean up
+                sharedDefaults.removeObject(forKey: "safariAnalysisRequest")
+                sharedDefaults.removeObject(forKey: "safariAnalysisResponse")
+                sharedDefaults.removeObject(forKey: "safariAnalysisStatus")
+                
+                if let error = response.error {
+                    throw NSError(domain: "SafariAnalysis", code: 2, userInfo: [NSLocalizedDescriptionKey: error])
+                }
+                
+                return response.results ?? ""
+            }
+            
+            // Wait before checking again
+            try await Task.sleep(nanoseconds: UInt64(checkInterval * 1_000_000_000))
+        }
+        
+        throw NSError(domain: "SafariAnalysis", code: 3, userInfo: [NSLocalizedDescriptionKey: "Timeout waiting for analysis response"])
     }
     
     // MARK: - Resume Management
@@ -244,170 +503,105 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         return true
     }
     
-    private func cleanJobDescription(_ jobText: String) async throws -> String {
-        let jobCleaningPrompt = """
-        You are a professional document processor. Clean and structure this job description for analysis.
-        
-        Extract and organize:
-        - Job Title and Level (Junior/Mid/Senior)
-        - Required Experience (years)
-        - Required Education
-        - Required Technical Skills
-        - Preferred Technical Skills
-        - Key Responsibilities
-        - Company/Industry Context
-        
-        Remove:
-        - Company marketing language
-        - Legal boilerplate
-        - Redundant information
-        
-        Output a clear, structured job description focused on requirements.
-        """
-        
-        let session = LanguageModelSession(instructions: jobCleaningPrompt)
-        let prompt = """
-        Clean and structure this job description text:
-        
-        === RAW JOB DESCRIPTION ===
-        \(jobText)
-        
-        === END RAW JOB DESCRIPTION ===
-        
-        Provide the cleaned, structured version following your instructions.
-        """
-        let response = try await session.respond(to: prompt)
-        return response.content
-    }
+    // MARK: - Score Processing
     
-    private func performEvaluation(resume: String, job: String) async throws -> String {
-        let yearsPrompt = """
-        Evaluate ONLY Years of Experience:
+    private func extractFourCycleScore(from response: String) -> (String, String) {
+        // Log the raw response to debug what we're getting
+        log("🔍 Raw WhatYOE response (first 500 chars): \(String(response.prefix(500)))")
+        log("🔍 Response length: \(response.count) characters")
         
-        **Why they fit:** [List relevant experience from resume]
-        **Why they don't fit:** [Experience gaps, if any]
-        **Fit Score:** [0-3]
-        **Gap Score:** [0-3]
-        
-        FIT SCORING: 0=None, 1=Some, 2=Good, 3=Strong
-        GAP SCORING: 0=Major gaps, 1=Moderate gaps, 2=Minor gaps, 3=No gaps
-        """
-        
-        let educationPrompt = """
-        Evaluate ONLY Education:
-        
-        **Why they fit:** [Degrees and relevance to job]
-        **Why they don't fit:** [Educational gaps, if any]
-        **Fit Score:** [0-3]
-        **Gap Score:** [0-3]
-        
-        FIT SCORING: 0=None, 1=Some, 2=Good, 3=Strong
-        GAP SCORING: 0=Major gaps, 1=Moderate gaps, 2=Minor gaps, 3=No gaps
-        """
-        
-        let skillsPrompt = """
-        Evaluate ONLY Technical Skills:
-        
-        **Why they fit:** [Technical skills that match requirements]
-        **Why they don't fit:** [Missing technical skills, if any]
-        **Fit Score:** [0-3]
-        **Gap Score:** [0-3]
-        
-        FIT SCORING: 0=None, 1=Some, 2=Good, 3=Strong
-        GAP SCORING: 0=Major gaps, 1=Moderate gaps, 2=Minor gaps, 3=No gaps
-        """
-        
-        let experiencePrompt = """
-        Evaluate ONLY Relevant Experience:
-        
-        **Why they fit:** [Industry/role experience that aligns]
-        **Why they don't fit:** [Relevant experience gaps, if any]
-        **Fit Score:** [0-3]
-        **Gap Score:** [0-3]
-        
-        FIT SCORING: 0=None, 1=Some, 2=Good, 3=Strong
-        GAP SCORING: 0=Major gaps, 1=Moderate gaps, 2=Minor gaps, 3=No gaps
-        """
-        
-        let rounds = [
-            ("round_1", "Years of Experience", yearsPrompt),
-            ("round_2", "Education", educationPrompt),
-            ("round_3", "Technical Skills", skillsPrompt),
-            ("round_4", "Relevant Experience", experiencePrompt)
+        // Extract all 8 scores from 4-cycle analysis (4 fit + 4 gap scores, 0-3 scale each)
+        // Try multiple patterns to be more flexible
+        let fitScorePatterns = [
+            #"Fit Score:\s*(\d+)"#,
+            #"\*\*Fit Score:\*\*\s*\[?(\d+)\]?"#,
+            #"Fit Score:\s*\[(\d+)\]"#
+        ]
+        let gapScorePatterns = [
+            #"Gap Score:\s*(\d+)"#,
+            #"\*\*Gap Score:\*\*\s*\[?(\d+)\]?"#,
+            #"Gap Score:\s*\[(\d+)\]"#
         ]
         
-        var results: [String] = []
+        var fitScores: [Int] = []
+        var gapScores: [Int] = []
+        let nsString = response as NSString
         
-        for (stage, title, prompt) in rounds {
-            log("💾 Progress: \(stage) - Evaluating \(title)...")
-            
-            let session = LanguageModelSession(instructions: prompt)
-            let userPrompt = "JOB:\n\(job)\n\nRESUME:\n\(resume)\n\nEvaluate \(title.lowercased()) only."
-            let result = try await session.respond(to: userPrompt)
-            results.append("## \(title.uppercased())\n\(result.content)")
-        }
-        
-        return combineResults(results)
-    }
-    
-    // MARK: - Score Processing
-    private func combineResults(_ results: [String]) -> String {
-        let (fitScores, gapScores) = extractScoresFromResults(results)
-        let totalFitScore = fitScores.reduce(0.0, +)
-        let totalGapScore = gapScores.reduce(0.0, +)
-        let finalScore = (totalFitScore + totalGapScore) / 8.0
-        
-        return """
-        \(results.joined(separator: "\n\n"))
-        
-        ## FINAL EVALUATION
-        **Total Fit Score:** \(String(format: "%.1f", totalFitScore)) / 12
-        **Total Gap Score:** \(String(format: "%.1f", totalGapScore)) / 12
-        **Final Score:** \(String(format: "%.1f", finalScore)) (0-3 scale)
-        """
-    }
-    
-    private func extractScoresFromResults(_ results: [String]) -> (fitScores: [Double], gapScores: [Double]) {
-        var fitScores: [Double] = []
-        var gapScores: [Double] = []
-        
-        for result in results {
-            if let fitScore = extractScore(from: result, pattern: #"Fit Score:\*?\*?\s*(\d+)"#) {
-                let adjustedScore = fitScore == 1 ? Double(fitScore) * 0.9 : 
-                                   fitScore >= 2 ? Double(fitScore) * 1.1 : 0.0
-                fitScores.append(adjustedScore)
-            } else {
-                fitScores.append(0.0)
-            }
-            
-            if let gapScore = extractScore(from: result, pattern: #"Gap Score:\*?\*?\s*(\d+)"#) {
-                gapScores.append(Double(gapScore) * 0.9)
-            } else {
-                gapScores.append(0.0)
+        // Extract Fit Scores - try multiple patterns
+        for pattern in fitScorePatterns {
+            if let fitRegex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
+                let fitResults = fitRegex.matches(in: response, options: [], range: NSRange(location: 0, length: nsString.length))
+                
+                for result in fitResults {
+                    if result.numberOfRanges > 1 {
+                        let scoreRange = result.range(at: 1)
+                        let scoreString = nsString.substring(with: scoreRange)
+                        if let score = Int(scoreString), score >= 0 && score <= 3 {
+                            fitScores.append(score)
+                        }
+                    }
+                }
+                
+                if !fitScores.isEmpty {
+                    log("🎯 Found fit scores using pattern: \(pattern)")
+                    break
+                }
             }
         }
         
-        return (fitScores: fitScores, gapScores: gapScores)
-    }
-    
-    private func extractScore(from text: String, pattern: String) -> Int? {
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
-              let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
-              let scoreRange = Range(match.range(at: 1), in: text) else {
-            return nil
+        // Extract Gap Scores - try multiple patterns
+        for pattern in gapScorePatterns {
+            if let gapRegex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
+                let gapResults = gapRegex.matches(in: response, options: [], range: NSRange(location: 0, length: nsString.length))
+                
+                for result in gapResults {
+                    if result.numberOfRanges > 1 {
+                        let scoreRange = result.range(at: 1)
+                        let scoreString = nsString.substring(with: scoreRange)
+                        if let score = Int(scoreString), score >= 0 && score <= 3 {
+                            gapScores.append(score)
+                        }
+                    }
+                }
+                
+                if !gapScores.isEmpty {
+                    log("🎯 Found gap scores using pattern: \(pattern)")
+                    break
+                }
+            }
         }
-        return Int(String(text[scoreRange]))
-    }
-    
-    private func extractScore(from response: String) -> (String, String) {
-        if let match = response.range(of: #"Final Score:\*?\*?\s*(\d+\.?\d*)"#, options: .regularExpression),
-           let scoreText = response[match].split(separator: " ").last,
-           let score = Double(scoreText) {
-            let rawEstimate = Int(score * 8)
-            let processedScoreString = String(format: "%.1f", score)
-            return (String(rawEstimate), processedScoreString)
+        
+        // Calculate final score using your formula
+        let fitMultiplier = 1.0  // You can adjust this
+        let gapMultiplier = 1.0  // You can adjust this
+        
+        let finalScore: Double
+        if fitScores.count == 4 && gapScores.count == 4 {
+            let fitSum = Double(fitScores.reduce(0, +))
+            let gapSum = Double(gapScores.reduce(0, +))
+            
+            // Formula: (sum of fit * multiplier + sum of gap * multiplier) / 8
+            finalScore = (fitSum * fitMultiplier + gapSum * gapMultiplier) / 8.0
+        } else {
+            log("⚠️ Expected 4 fit and 4 gap scores, got \(fitScores.count) fit and \(gapScores.count) gap")
+            finalScore = 0.0
         }
-        return ("0", "0.0")
+        
+        let processedScoreString = String(format: "%.1f", finalScore)
+        let rawEstimate = Int(finalScore.rounded())
+        
+        log("🔢 Extracted 8 scores - Fit: \(fitScores), Gap: \(gapScores)")
+        log("🔢 Final calculation: (Fit sum: \(fitScores.reduce(0, +)) * \(fitMultiplier) + Gap sum: \(gapScores.reduce(0, +)) * \(gapMultiplier)) / 8 = \(finalScore)")
+        
+        // Store scores for background.js logging
+        let allScores: [String: Any] = [
+            "fitScores": fitScores,
+            "gapScores": gapScores,
+            "finalScore": finalScore
+        ]
+        sharedDefaults.set(allScores, forKey: "lastAnalysisScores")
+        
+        return (String(rawEstimate), processedScoreString)
     }
     
     // MARK: - Progress Management
@@ -433,6 +627,50 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         
         let response = NSExtensionItem()
         response.userInfo = [ SFExtensionMessageKey: [ 
+            "aiAnalysis": score,
+            "rawScore": rawScore,
+            "status": "success"
+        ]]
+        
+        context.completeRequest(returningItems: [response], completionHandler: nil)
+    }
+    
+    private func sendFinalResponseWithScores(score: String, rawScore: String, context: NSExtensionContext) {
+        log("📊 Sending final result with scores: \(score)")
+        
+        // Get the stored scores from extractFourCycleScore
+        let storedScores = sharedDefaults.object(forKey: "lastAnalysisScores") as? [String: Any]
+        
+        log("🔍 DEBUG: storedScores = \(String(describing: storedScores))")
+        
+        var responseDict: [String: Any] = [
+            "aiAnalysis": score,
+            "rawScore": rawScore,
+            "status": "success"
+        ]
+        
+        // Add scores if available
+        if let scores = storedScores {
+            responseDict["scores"] = scores
+            log("✅ DEBUG: Added scores to response")
+        } else {
+            log("❌ DEBUG: No stored scores found")
+        }
+        
+        log("🔍 DEBUG: Final responseDict = \(responseDict)")
+        
+        let response = NSExtensionItem()
+        response.userInfo = [SFExtensionMessageKey: responseDict]
+        
+        context.completeRequest(returningItems: [response], completionHandler: nil)
+    }
+    
+    private func sendPhaseResponse(phase: String, score: String, rawScore: String, context: NSExtensionContext) {
+        log("✅ Sending \(phase) response: \(score)")
+        
+        let response = NSExtensionItem()
+        response.userInfo = [ SFExtensionMessageKey: [ 
+            "phase": phase,
             "aiAnalysis": score,
             "rawScore": rawScore,
             "status": "success"

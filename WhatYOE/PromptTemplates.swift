@@ -119,37 +119,49 @@ extension PromptTemplates {
     - Irrelevant personal info (except name, email, phone)
     - Duplicate sections or repeated information
     
-    Organize into clear sections:
+    Organize into clear sections for evaluation:
     - Contact Information
     - Professional Summary
-    - Work Experience (with dates, companies, roles)
-    - Education (degrees, institutions, dates)
-    - Technical Skills
-    - Certifications
+    - Work Experience (with dates, companies, roles, key achievements)
+    - Education (degrees, institutions, dates, relevance)
+    - Technical Skills (categorized by proficiency level)
+    - Certifications and Training
     
-    Keep all substantive content. Fix grammar/typos only if obvious.
-    Output clean, well-structured text ready for evaluation.
+    Focus on content that will be evaluated for:
+    1. Years of Experience
+    2. Education Match
+    3. Technical Skills
+    4. Relevant Experience
+    
+    Output clean, well-structured text ready for evaluation. Be specific about dates, technologies, and achievements.
     """
     
     // JOB DESCRIPTION CLEANING PROMPT
     static let jobCleaningPrompt = """
     You are a professional document processor. Clean and structure this job description for analysis.
     
-    Extract and organize:
+    Extract and organize content for evaluation:
     - Job Title and Level (Junior/Mid/Senior)
-    - Required Experience (years)
-    - Required Education
-    - Required Technical Skills
-    - Preferred Technical Skills
-    - Key Responsibilities
-    - Company/Industry Context
+    - Required Experience (years, specific requirements)
+    - Required Education (degree types, institutions, relevance)
+    - Required Technical Skills (specific technologies, tools, languages)
+    - Preferred Technical Skills (bonus qualifications)
+    - Key Responsibilities (industry context, role scope)
+    - Company/Industry Context (domain expertise needed)
+    
+    Focus on requirements that will be evaluated for:
+    1. Years of Experience (minimum/maximum requirements)
+    2. Education Match (degree requirements, field relevance)
+    3. Technical Skills (specific technologies, proficiency levels)
+    4. Relevant Experience (industry, role, domain expertise)
     
     Remove:
     - Company marketing language
     - Legal boilerplate
     - Redundant information
+    - Vague descriptions
     
-    Output a clear, structured job description focused on requirements.
+    Output a clear, structured job description focused on evaluation criteria. Be specific about requirements and expectations.
     """
     
     // Individual evaluation prompts for 4-round assessment
@@ -256,6 +268,81 @@ extension PromptTemplates {
         
         Provide structured evaluation following the format in your instructions.
         """
+    }
+    
+    // MARK: - Single Run Comprehensive Evaluation
+    static let comprehensiveEvaluationPrompt = """
+    Evaluate this candidate comprehensively in a single analysis.
+    
+    JOB DESCRIPTION:
+    {jobDescription}
+    
+    RESUME:
+    {resume}
+    
+    SCORING SYSTEM (READ THIS FIRST):
+    - Fit Score: 0=None, 1=Some, 2=Good, 3=Strong
+    - Gap Score: 0=Major gaps, 1=Moderate gaps, 2=Minor gaps, 3=No gaps
+    - Higher Gap Score = Better (fewer gaps)
+    
+    FIT SCORING: 0=None, 1=Some, 2=Good, 3=Strong
+    
+    GAP SCORING (IMPORTANT - HIGHER SCORE = BETTER):
+    0 = MAJOR gaps (significant deficiencies, many missing requirements)
+    1 = MODERATE gaps (some concerns that need attention)
+    2 = MINOR gaps (small concerns but manageable)
+    3 = NO gaps (fully meets all requirements)
+    
+    Example: If candidate perfectly matches all requirements, give Gap Score: 3
+    
+    Provide scores for ALL criteria in this exact format:
+    
+    IMPORTANT: Use the exact format below with **bold labels** and [bracketed placeholders].
+    
+    ## YEARS OF EXPERIENCE EVALUATION
+    **Why they fit:** [List relevant experience from resume]
+    **Why they don't fit:** [Experience gaps, if any]
+    **Fit Score:** [0-3]
+    **Gap Score:** [0-3]
+    
+    Evaluate ONLY Years of Experience using the scoring system above.
+    
+    ## EDUCATION EVALUATION  
+    **Why they fit:** [Degrees and relevance to job]
+    **Why they don't fit:** [Educational gaps, if any]
+    **Fit Score:** [0-3]
+    **Gap Score:** [0-3]
+    
+    Evaluate ONLY Education using the scoring system above.
+    
+    ## TECHNICAL SKILLS EVALUATION
+    **Why they fit:** [Technical skills that match requirements]
+    **Why they don't fit:** [Missing technical skills, if any]
+    **Fit Score:** [0-3]
+    **Gap Score:** [0-3]
+    
+    Evaluate ONLY Technical Skills using the scoring system above.
+    
+    ## RELEVANT EXPERIENCE EVALUATION
+    **Why they fit:** [Industry/role experience that aligns]
+    **Why they don't fit:** [Relevant experience gaps, if any]
+    **Fit Score:** [0-3]
+    **Gap Score:** [0-3]
+    
+    Evaluate ONLY Relevant Experience using the scoring system above.
+    
+    ## FINAL SUMMARY
+    **Overall Fit Score:** [0-3]
+    **Overall Gap Score:** [0-3]
+    **Recommendation:** [Brief summary of candidate fit]
+    
+    Be specific and cite evidence from both documents.
+    """
+    
+    static func createComprehensiveEvaluationPrompt(cleanedResume: String, cleanedJob: String) -> String {
+        return comprehensiveEvaluationPrompt
+            .replacingOccurrences(of: "{resume}", with: cleanedResume)
+            .replacingOccurrences(of: "{jobDescription}", with: cleanedJob)
     }
     
     static func createYearsEvaluationPrompt(cleanedResume: String, cleanedJob: String) -> String {

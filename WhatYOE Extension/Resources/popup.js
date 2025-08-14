@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const updateResumeLink = document.getElementById('updateResumeLink');
     const statusDiv = document.getElementById('statusMessage');
     const resumeSelect = document.getElementById('resumeSelect');
-    const debugButton = document.getElementById('debugButton');
+    const refreshResumesBtn = document.getElementById('refreshResumesBtn');
     
     let currentTab;
     let autoAnalysisEnabled = false;
@@ -49,17 +49,18 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
         
-        // Load available resumes
+        // Test native messaging connection FIRST
+        const nativeMessagingWorking = await testNativeMessaging();
+        if (!nativeMessagingWorking) {
+            showStatus('Native messaging not working - check installation');
+            return;
+        }
+        
+        // Load available resumes AFTER confirming native messaging works
         await loadAvailableResumes();
         
         // Check current analysis state from content script
         await checkAnalysisState();
-        
-        // Test native messaging connection
-        const nativeMessagingWorking = await testNativeMessaging();
-        if (!nativeMessagingWorking) {
-            return;
-        }
         
         // Load saved settings (Safari compatible)
         try {
@@ -124,9 +125,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
     
-    // Debug button
-    debugButton.addEventListener('click', async function() {
-        await showDebugLogs();
+    // Refresh resumes button
+    refreshResumesBtn.addEventListener('click', async function() {
+        showStatus('Refreshing resume list...');
+        await loadAvailableResumes();
     });
     
     async function startAnalysis() {
@@ -202,6 +204,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Wait a moment for content script to potentially load
         await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Try ping again
+        try {
+            const retryResponse = await browser.tabs.sendMessage(currentTab.id, { action: 'ping' });
+            if (retryResponse && retryResponse.success) return;
+        } catch (retryError) {
+            console.error('Content script still not available after wait:', retryError);
+        }
     }
     
     async function launchResumeUpdateApp() {
@@ -245,11 +255,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             } else {
                 availableResumes = [];
                 updateResumeSelect();
+                showStatus('Failed to load resumes - check native app');
             }
         } catch (error) {
             console.error('Failed to load resumes:', error);
             availableResumes = [];
             updateResumeSelect();
+            showStatus(`Error loading resumes: ${error.message}`);
         }
     }
     
@@ -341,27 +353,5 @@ document.addEventListener('DOMContentLoaded', async function() {
             statusDiv.classList.remove('error');
         }
         // Status text will remain visible until changed by another message
-    }
-    
-    async function showDebugLogs() {
-        try {
-            const response = await browser.runtime.sendNativeMessage("com.kuangming.WhatYOE", {
-                message: "getDebugLogs"
-            });
-            
-            if (response && response.type === "debug_logs") {
-                const logs = response.logs || [];
-                if (logs.length === 0) {
-                    alert("No debug logs found");
-                } else {
-                    alert("Debug Logs:\n\n" + logs.join('\n'));
-                }
-            } else {
-                alert("Failed to retrieve debug logs");
-            }
-        } catch (error) {
-            console.error('Failed to get debug logs:', error);
-            alert("Error retrieving debug logs: " + error.message);
-        }
     }
 });

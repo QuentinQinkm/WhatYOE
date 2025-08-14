@@ -8,6 +8,10 @@
 import Foundation
 import os.log
 import PDFKit
+import AppKit
+
+// Import shared data structures
+// (These should be defined in this file or included properly in the target)
 
 struct ResumeItem {
     let id: String
@@ -123,7 +127,7 @@ class ResumeManager {
         }
     }
     
-    private func extractTextFromPDF(url: URL) throws -> String {
+    func extractTextFromPDF(url: URL) throws -> String {
         guard let pdfDocument = PDFDocument(url: url) else {
             throw NSError(domain: "PDFError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Could not open PDF file"])
         }
@@ -145,19 +149,105 @@ class ResumeManager {
         return extractedText
     }
     
-    private func cleanResumeText(_ text: String) async throws -> String {
-        // For now, just do basic text cleaning
-        var cleanedText = text
+    func cleanResumeText(_ text: String) async throws -> String {
+        do {
+            // Send cleaning request to WhatYOE main app instead of processing locally
+            let cleanedText = try await requestResumeCleaningFromMainApp(text)
+            return cleanedText
+        } catch {
+            os_log(.error, "Server-based cleaning failed, falling back to basic cleaning: %@", error.localizedDescription)
+            
+            // Fallback to basic text cleaning if server request fails
+            var cleanedText = text
+            cleanedText = cleanedText.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            cleanedText = cleanedText.replacingOccurrences(of: "\n\\s*\n", with: "\n\n", options: .regularExpression)
+            cleanedText = cleanedText.trimmingCharacters(in: .whitespacesAndNewlines)
+            return cleanedText
+        }
+    }
+    
+    private func requestResumeCleaningFromMainApp(_ text: String) async throws -> String {
+        // Create cleaning request
+        let request = ResumeCleaningRequest(
+            id: UUID().uuidString,
+            rawText: text,
+            timestamp: Date()
+        )
         
-        // Remove extra whitespace and normalize line breaks
-        cleanedText = cleanedText.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
-        cleanedText = cleanedText.replacingOccurrences(of: "\n\\s*\n", with: "\n\n", options: .regularExpression)
-        cleanedText = cleanedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Store request in shared defaults
+        if let requestData = try? JSONEncoder().encode(request) {
+            userDefaults.set(requestData, forKey: "resumeCleaningRequest")
+            userDefaults.set("pending", forKey: "resumeCleaningStatus")
+        }
         
-        // TODO: Implement AI-based cleaning using PromptTemplates.resumeCleaningPrompt
-        // This would require LanguageModelSession integration
+        // Launch main app to process the request
+        try await launchMainAppForCleaning()
         
-        return cleanedText
+        // Wait for response
+        return try await waitForCleaningResponse(requestId: request.id)
+    }
+    
+    private func launchMainAppForCleaning() async throws {
+        let bundleIdentifier = "com.kuangming.WhatYOE"
+        
+        guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else {
+            throw NSError(domain: "AppLaunch", code: 1, userInfo: [NSLocalizedDescriptionKey: "WhatYOE main app not found"])
+        }
+        
+        let config = NSWorkspace.OpenConfiguration()
+        config.arguments = ["--resume-cleaning"]
+        
+        try await NSWorkspace.shared.openApplication(at: appURL, configuration: config)
+        os_log(.info, "Launched WhatYOE main app for resume cleaning")
+    }
+    
+    private func waitForCleaningResponse(requestId: String) async throws -> String {
+        let maxWaitTime: TimeInterval = 30.0 // 30 seconds timeout
+        let checkInterval: TimeInterval = 0.5 // Check every 500ms
+        let startTime = Date()
+        
+        print("🧹 Desktop: Waiting for cleaning response for request: \(requestId)")
+        print("🧹 Desktop: Using UserDefaults suite: group.com.kuangming.WhatYOE.shared")
+        
+        while Date().timeIntervalSince(startTime) < maxWaitTime {
+            // Check if response is ready
+            if let responseData = userDefaults.data(forKey: "resumeCleaningResponse") {
+                print("🧹 Desktop: Found response data, length: \(responseData.count)")
+                
+                if let response = try? JSONDecoder().decode(ResumeCleaningResponse.self, from: responseData) {
+                    print("🧹 Desktop: Decoded response for request: \(response.requestId)")
+                    print("🧹 Desktop: Expected request: \(requestId)")
+                    
+                    if response.requestId == requestId {
+                        print("🧹 Desktop: Request ID matches! Processing response...")
+                        
+                        // Clean up
+                        userDefaults.removeObject(forKey: "resumeCleaningRequest")
+                        userDefaults.removeObject(forKey: "resumeCleaningResponse")
+                        userDefaults.removeObject(forKey: "resumeCleaningStatus")
+                        
+                        if let error = response.error {
+                            throw NSError(domain: "ResumeCleaning", code: 2, userInfo: [NSLocalizedDescriptionKey: error])
+                        }
+                        
+                        print("🧹 Desktop: Successfully received cleaned text, length: \(response.cleanedText?.count ?? 0)")
+                        return response.cleanedText ?? ""
+                    } else {
+                        print("🧹 Desktop: Request ID mismatch - ignoring response")
+                    }
+                } else {
+                    print("🧹 Desktop: Failed to decode response data")
+                }
+            } else {
+                print("🧹 Desktop: No response data found yet...")
+            }
+            
+            // Wait before checking again
+            try await Task.sleep(nanoseconds: UInt64(checkInterval * 1_000_000_000))
+        }
+        
+        print("🧹 Desktop: Timeout reached - no response received")
+        throw NSError(domain: "ResumeCleaning", code: 3, userInfo: [NSLocalizedDescriptionKey: "Timeout waiting for response from main app"])
     }
     
     // MARK: - Utility Methods
@@ -175,3 +265,31 @@ class ResumeManager {
 }
 
 extension ResumeItem: Codable {}
+
+// MARK: - Communication Data Structures (Frontend to Backend)
+struct ResumeCleaningRequest: Codable {
+    let id: String
+    let rawText: String
+    let timestamp: Date
+}
+
+struct ResumeCleaningResponse: Codable {
+    let requestId: String
+    let cleanedText: String?
+    let error: String?
+    let timestamp: Date
+}
+
+struct AnalysisRequest: Codable {
+    let id: String
+    let resumeText: String
+    let jobDescription: String
+    let timestamp: Date
+}
+
+struct AnalysisResponse: Codable {
+    let requestId: String
+    let results: String?
+    let error: String?
+    let timestamp: Date
+}

@@ -23,12 +23,10 @@
 		BE476B9B2E4CF04F002A4D78 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BE476B8F2E4CF04F002A4D78 /* Assets.xcassets */; };
 		BE476B9C2E4CF04F002A4D78 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B942E4CF04F002A4D78 /* main.swift */; };
 		BE476B9D2E4CF04F002A4D78 /* DesktopAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B922E4CF04F002A4D78 /* DesktopAppDelegate.swift */; };
-		BE476B9E2E4CF04F002A4D78 /* ResumeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B962E4CF04F002A4D78 /* ResumeManager.swift */; };
-		BE476B9F2E4CF04F002A4D78 /* PromptTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B952E4CF04F002A4D78 /* PromptTemplates.swift */; };
 		BE476BA02E4CF04F002A4D78 /* DesktopAnalysisViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B912E4CF04F002A4D78 /* DesktopAnalysisViewController.swift */; };
 		BE476BA52E4CF667002A4D78 /* ResumeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B962E4CF04F002A4D78 /* ResumeManager.swift */; };
-		BE476BA62E4CF667002A4D78 /* PromptTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B952E4CF04F002A4D78 /* PromptTemplates.swift */; };
 		BE476BA72E4CF6EA002A4D78 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE9CE85A2E4A892F00C8C5D2 /* PDFKit.framework */; };
+		BE476BAB2E4D40A0002A4D78 /* PromptTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BA82E4D40A0002A4D78 /* PromptTemplates.swift */; };
 		BE9C41AA2E43EA9700073E0D /* FoundationModels.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE9C41A92E43EA9700073E0D /* FoundationModels.framework */; };
 		BE9C41B42E44029700073E0D /* popup.html in Resources */ = {isa = PBXBuildFile; fileRef = BE9C41B22E44029700073E0D /* popup.html */; };
 		BE9C41B52E44029700073E0D /* content.js in Resources */ = {isa = PBXBuildFile; fileRef = BE9C41B12E44029700073E0D /* content.js */; };
@@ -84,6 +82,8 @@
 		BE476B952E4CF04F002A4D78 /* PromptTemplates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptTemplates.swift; sourceTree = "<group>"; };
 		BE476B962E4CF04F002A4D78 /* ResumeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResumeManager.swift; sourceTree = "<group>"; };
 		BE476B982E4CF04F002A4D78 /* WhatYOE-Desktop.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "WhatYOE-Desktop.entitlements"; sourceTree = "<group>"; };
+		BE476BA82E4D40A0002A4D78 /* PromptTemplates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptTemplates.swift; sourceTree = "<group>"; };
+		BE476BA92E4D40A0002A4D78 /* ResumeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResumeManager.swift; sourceTree = "<group>"; };
 		BE9C41A92E43EA9700073E0D /* FoundationModels.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FoundationModels.framework; path = System/Library/Frameworks/FoundationModels.framework; sourceTree = SDKROOT; };
 		BE9C41B12E44029700073E0D /* content.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = content.js; sourceTree = "<group>"; };
 		BE9C41B22E44029700073E0D /* popup.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = popup.html; sourceTree = "<group>"; };
@@ -148,6 +148,8 @@
 		6045B8E3249289520091386F /* WhatYOE */ = {
 			isa = PBXGroup;
 			children = (
+				BE476BA82E4D40A0002A4D78 /* PromptTemplates.swift */,
+				BE476BA92E4D40A0002A4D78 /* ResumeManager.swift */,
 				BE476B6F2E4BC195002A4D78 /* main.swift */,
 				BE476B692E4BC195002A4D78 /* AnalysisViewController.swift */,
 				6045B8E4249289520091386F /* Native_Messaging_Demo.entitlements */,
@@ -338,10 +340,9 @@
 			isa = PBXSourcesBuildPhase;
 			files = (
 				BE476B6E2E4BC195002A4D78 /* main.swift in Sources */,
+				BE476BAB2E4D40A0002A4D78 /* PromptTemplates.swift in Sources */,
 				BE476B6C2E4BC195002A4D78 /* AnalysisViewController.swift in Sources */,
 				6045B8E6249289520091386F /* AppDelegate.swift in Sources */,
-				BE476B9E2E4CF04F002A4D78 /* ResumeManager.swift in Sources */,
-				BE476B9F2E4CF04F002A4D78 /* PromptTemplates.swift in Sources */,
 			);
 		};
 		6045B8EF249289530091386F /* Sources */ = {
@@ -356,7 +357,6 @@
 				BE476B9C2E4CF04F002A4D78 /* main.swift in Sources */,
 				BE476B9D2E4CF04F002A4D78 /* DesktopAppDelegate.swift in Sources */,
 				BE476BA52E4CF667002A4D78 /* ResumeManager.swift in Sources */,
-				BE476BA62E4CF667002A4D78 /* PromptTemplates.swift in Sources */,
 				BE476BA02E4CF04F002A4D78 /* DesktopAnalysisViewController.swift in Sources */,
 			);
 		};
