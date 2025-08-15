@@ -4,17 +4,19 @@ A macOS application that analyzes how well a resume matches a job description us
 
 ## ⚠️ Current Status - Development Version
 -----Aug 15------
-New function: Job Manager - Scanned jobs will be saved to local storage
-Added UI for job management to desktop interface
-Local analysis function will be used for dev test only
-Optimized code structure and removed duplicate code
-Fixed web extension score loading and UI alignment issues
+New function: 
+-Job Manager - Scanned jobs will be saved to local storage
+-Added UI for job management to desktop interface
+-Local analysis function will be used for dev test only
+-Optimized code structure and removed duplicate code
+-Fixed web extension score loading and UI alignment issues
 
 -----Aug 15------
-Start building UI based on concept - Implemented modern SwiftUI desktop interface with glass morphism design system, modular button components, gradient text fading, and improved resume management workflow.
+-Start building UI based on concept 
+-Implemented modern SwiftUI desktop interface with glass morphism design system, modular button components, gradient text fading, and improved resume management workflow.
 
 -----Aug 13------
-Reconstruct the app into three targets: WhatYOE background serve, WhatYOE Desktop Interface (pending fix for proper resume mangement), WhatYOE safari extension (Pending fix for correct label render)
+-Reconstruct the app into three targets: WhatYOE background serve, WhatYOE Desktop Interface (pending fix for proper resume mangement), WhatYOE safari extension (Pending fix for correct label render)
 
 -----Aug 12:------
 
