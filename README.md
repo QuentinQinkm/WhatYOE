@@ -3,7 +3,7 @@
 A macOS application that analyzes how well a resume matches a job description using Apple's Foundation Models AI.
 
 ## ⚠️ Current Status - Development Version
------Dec 19------
+-----Aug 15------
 New function: Job Manager - Scanned jobs will be saved to local storage
 Added UI for job management to desktop interface
 Local analysis function will be used for dev test only
