@@ -10,7 +10,6 @@ import UniformTypeIdentifiers
 struct ContentView: View {
     // MARK: - Background Opacity Constants
     private let leftListOpacity: Double = 0.65
-    private let welcomeMessageOpacity: Double = 0.65
     private let rightSectionOpacity: Double = 0.8
     
     // MARK: - Padding Constants
@@ -21,12 +20,15 @@ struct ContentView: View {
     
     @State private var resumes: [ResumeItem] = []
     @State private var selectedResume: ResumeItem?
-    @State private var selectedTab = 0
+    @State private var selectedTab = 0 // Jobs tab by default
     @State private var isImporting = false
     @State private var pendingResumeData: PendingResumeData?
+    @State private var jobs: [JobItem] = []
+    @State private var selectedJob: JobItem? = nil
     @State private var renamingResume: ResumeItem?
     @State private var renameText = ""
     private let resumeManager = ResumeManager.shared
+    private let jobManager = JobManager.shared
     
     struct PendingResumeData {
         let fileName: String
@@ -44,78 +46,82 @@ struct ContentView: View {
             
             // Content with specific opacity backgrounds
             HStack(spacing: 0) {
-                // Left Panel - Resume List (Always visible)
-                ResumeListView(
-                    resumes: resumes,
-                    selectedResume: $selectedResume,
-                    onImport: importResume,
-                    onDelete: deleteResume,
-                    onRename: startRename
-                )
+                // Left Panel - Conditional list based on selected tab
+                Group {
+                    if selectedTab == 0 {
+                        // Jobs List
+                        JobListView(
+                            jobs: jobs,
+                            selectedJob: $selectedJob,
+                            onDelete: deleteJob
+                        )
+                    } else {
+                        // Resume List (default for Resume and Analysis tabs)
+                        ResumeListView(
+                            resumes: resumes,
+                            selectedResume: $selectedResume,
+                            onImport: importResume,
+                            onDelete: deleteResume,
+                            onRename: startRename
+                        )
+                    }
+                }
                 .frame(width: 250)
+                .padding(.top, 42) // Align with right panel content area (16 + 16 = 32 to account for 12px text padding)
                 .background(Color.white.opacity(leftListOpacity)) // List background: white 0.5 opacity
                 
                 Divider()
                     .background(Color.white.opacity(0.5))
                 
-                // Right Panel - Conditional content
-                if (resumes.isEmpty || selectedResume == nil) && pendingResumeData == nil {
-                    // Welcome message when no resumes or no selection
-                    WelcomeRightPanel()
-                        .background(Color.white.opacity(welcomeMessageOpacity)) // Welcome section: same as list (white 0.5 opacity)
-                } else {
-                    // Full tabs interface when resume is selected
-                    ZStack {
-                        VStack(spacing: 8) {
-                            // Custom Tab Picker - positioned at the top
-                            CustomTabPicker(selectedTab: $selectedTab)
-                                .padding(.leading, rightSectionPadding)
-                                .padding(.trailing, rightSectionPadding)
-                                .padding(.top, 0)
-                                .padding(.bottom, 0)
-                            
-                            // Tab Content
-                            Group {
-                                if selectedTab == 0 {
-                                    if let pendingData = pendingResumeData {
-                                        PendingResumeView(
-                                            pendingData: pendingData,
-                                            onProceed: proceedWithLLM,
-                                            onSave: saveProcessedResume,
-                                            onCancel: cancelImport,
-                                            horizontalPadding: rightSectionPadding,
-                                            buttonBackgroundColor: buttonBackgroundColor
-                                        )
-                                    } else {
-                                        ResumeDetailView(resume: selectedResume, horizontalPadding: rightSectionPadding)
-                                    }
-                                } else {
-                                    AnalysisView(selectedResume: selectedResume)
-                                }
-                            }
-                        }
+                // Right Panel - Always show tabs interface
+                VStack(spacing: 0) {
+                    // Top section with tab picker and label
+                    HStack {
+                        // Custom Tab Picker - positioned at the top
+                        CustomTabPicker(selectedTab: $selectedTab)
+                            .padding(.leading, rightSectionPadding)
                         
-                        // Label positioned at tab picker level
+                        Spacer()
+                        
+                        // Gray label centered with tab picker on Y axis
+                        Text(getLabelText())
+                            .font(.system(size: 12, weight: .light))
+                            .foregroundColor(.white)
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 8)
+                            .background(.regularMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: .infinity, style: .continuous))
+                            .opacity(0.8)
+                            .padding(.trailing, rightSectionPadding)
+                    }
+                    .padding(.top, 8)
+                    .padding(.bottom, 8)
+                    
+                    // Tab Content - takes remaining space with 16px bottom padding
+                    Group {
                         if selectedTab == 0 {
-                            VStack {
-                                HStack {
-                                    Spacer()
-                                    Text(pendingResumeData != nil ? "Raw Resume Content" : (selectedResume != nil ? "Cleaned Resume Content" : ""))
-                                        .font(.system(size: 12, weight: .light))
-                                        .foregroundColor(.white)
-                                        .padding(.vertical, 4)
-                                        .padding(.horizontal, 8)
-                                        .background(.regularMaterial)
-                                        .clipShape(RoundedRectangle(cornerRadius: .infinity, style: .continuous))
-                                        .opacity(0.8)
-                                }
-                                .padding(.trailing, rightSectionPadding)
-                                Spacer()
+                            JobDetailView(job: selectedJob, horizontalPadding: rightSectionPadding, jobs: jobs)
+                        } else if selectedTab == 1 {
+                            if let pendingData = pendingResumeData {
+                                PendingResumeView(
+                                    pendingData: pendingData,
+                                    onProceed: proceedWithLLM,
+                                    onSave: saveProcessedResume,
+                                    onCancel: cancelImport,
+                                    horizontalPadding: rightSectionPadding,
+                                    buttonBackgroundColor: buttonBackgroundColor
+                                )
+                            } else {
+                                ResumeDetailView(resume: selectedResume, horizontalPadding: rightSectionPadding, resumes: resumes)
                             }
+                        } else {
+                            AnalysisView(selectedResume: selectedResume)
                         }
                     }
-                    .background(Color.white.opacity(rightSectionOpacity)) // Right control panel: white 0.8 opacity
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.bottom, 16)
                 }
+                .background(Color.white.opacity(rightSectionOpacity)) // Right control panel: white 0.8 opacity
             }
         }
         .sheet(item: $renamingResume) { resume in
@@ -128,6 +134,10 @@ struct ContentView: View {
         }
         .onAppear {
             loadResumes()
+            loadJobs()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("JobsUpdated"))) { _ in
+            loadJobs()
         }
     }
     
@@ -135,6 +145,27 @@ struct ContentView: View {
     private func loadResumes() {
         resumes = resumeManager.getAllResumes()
     }
+    
+    private func getLabelText() -> String {
+        switch selectedTab {
+        case 0:
+            return selectedJob != nil ? "Job Analysis Report" : ""
+        case 1:
+            return pendingResumeData != nil ? "Raw Resume Content" : (selectedResume != nil ? "Cleaned Resume Content" : "")
+        case 2:
+            return "Analysis Results"
+        default:
+            return ""
+        }
+    }
+    
+    private func loadJobs() {
+        jobs = jobManager.getAllJobs()
+        if selectedJob == nil && !jobs.isEmpty {
+            selectedJob = jobs.first
+        }
+    }
+    
     
     private func importResume() {
         let openPanel = NSOpenPanel()
@@ -158,7 +189,7 @@ struct ContentView: View {
                             rawText: rawText,
                             url: url
                         )
-                        selectedTab = 0 // Switch to Resume tab to show the import
+                        selectedTab = 1 // Switch to Resume tab to show the import
                     }
                 } catch {
                     print("❌ Failed to extract text from PDF: \(error)")
@@ -251,20 +282,18 @@ struct ContentView: View {
         renamingResume = nil
         renameText = ""
     }
-}
-
-// MARK: - Welcome Right Panel
-struct WelcomeRightPanel: View {
-    var body: some View {
-        VStack {
-            Text("Select or import a resume to start")
-                .font(.title2)
-                .foregroundColor(.black.opacity(0.6))
+    
+    private func deleteJob(_ job: JobItem) {
+        jobManager.deleteJob(withId: job.jobId)
+        loadJobs()
+        
+        // Clear selection if deleted job was selected
+        if selectedJob?.jobId == job.jobId {
+            selectedJob = jobs.first
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        // Uses global brightness layer (0.4) - no additional background needed
     }
 }
+
 
 // MARK: - Pending Resume View
 struct PendingResumeView: View {
@@ -374,16 +403,12 @@ struct ResumeListView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Top spacing to align with right section content (below tab selector)
-            Spacer()
-                .frame(height: 40)
-            
-            // Resume List
+            // Resume List - takes remaining space
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(resumes, id: \.id) { resume in
-                        ResumeRowView(
-                            resume: resume,
+                        GenericRowView(
+                            item: resume,
                             isSelected: selectedResume?.id == resume.id
                         )
                         .onTapGesture {
@@ -397,13 +422,12 @@ struct ResumeListView: View {
                                 onDelete(resume)
                             }
                         }
-                        
-
                     }
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             
-            // Bottom Actions
+            // Bottom Actions - aligned with right panel bottom
             HStack {
                 Button(action: onImport) {
                     Image(systemName: "plus")
@@ -426,6 +450,7 @@ struct ResumeListView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
+            .padding(.bottom, 16)
             .background(Color.clear)
         }
     }
@@ -437,41 +462,6 @@ struct ResumeListView: View {
     }
 }
 
-// MARK: - Resume Row View
-struct ResumeRowView: View {
-    let resume: ResumeItem
-    let isSelected: Bool
-    @State private var isHovered = false
-    
-    var body: some View {
-        VStack(alignment: .trailing, spacing: 4) {
-            Text(resume.name)
-                .font(isSelected ? .title2 : .headline)
-                .fontWeight(.light)
-                .foregroundColor(.black.opacity(isSelected ? 1.0 : (isHovered ? 1.0 : 0.5)))
-                .lineLimit(1)
-                .animation(.easeInOut(duration: 0.2), value: isSelected)
-                .animation(.easeInOut(duration: 0.15), value: isHovered)
-            
-            Text(DateFormatter.shortDate.string(from: resume.dateCreated))
-                .font(isSelected ? .body : .caption)
-                .fontWeight(.light)
-                .foregroundColor(.black.opacity(isSelected ? 1.0 : (isHovered ? 1.0 : 0.5)))
-                .animation(.easeInOut(duration: 0.2), value: isSelected)
-                .animation(.easeInOut(duration: 0.15), value: isHovered)
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .trailing)
-        .background(Color.clear)
-        .contentShape(Rectangle())
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isHovered = hovering
-            }
-        }
-    }
-}
 
 // MARK: - Shared Resume Content View
 struct ResumeContentView: View {
@@ -498,7 +488,8 @@ struct ResumeContentView: View {
                             .foregroundColor(.black)
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 20)
+                            .padding(.top, 12)
+                            .padding(.bottom, 12)
                     }
                     .mask(
                         LinearGradient(
@@ -524,7 +515,7 @@ struct ResumeContentView: View {
             }
         }
         .padding(.horizontal, horizontalPadding)
-        .padding(.vertical)
+        // Removed redundant vertical padding since gradient fading handles spacing
     }
 }
 
@@ -532,6 +523,7 @@ struct ResumeContentView: View {
 struct ResumeDetailView: View {
     let resume: ResumeItem?
     let horizontalPadding: CGFloat
+    let resumes: [ResumeItem]
     
     var body: some View {
         Group {
@@ -542,15 +534,22 @@ struct ResumeDetailView: View {
                     horizontalPadding: horizontalPadding
                 )
             } else {
-                VStack {
+                VStack(spacing: 16) {
                     Image(systemName: "doc.text")
                         .font(.system(size: 48))
-                        .foregroundColor(.black.opacity(0.4))
+                        .foregroundColor(.secondary)
                     
-                    Text("Select a resume to view details")
-                        .font(.headline)
-                        .foregroundColor(.black.opacity(0.6))
+                    if resumes.isEmpty {
+                        Text("Please import a resume")
+                            .font(.title2)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("Select a resume to start")
+                            .font(.title2)
+                            .foregroundColor(.secondary)
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }
@@ -703,8 +702,9 @@ struct CustomTabPicker: View {
     @State private var hoveringTab: Int? = nil
     
     private let tabs = [
-        (index: 0, title: "Resume"),
-        (index: 1, title: "Analysis")
+        (index: 0, title: "Jobs"),
+        (index: 1, title: "Resume"),
+        (index: 2, title: "Analysis")
     ]
     
     var body: some View {
@@ -953,6 +953,195 @@ struct VisualEffectView: NSViewRepresentable {
     
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
         // No updates needed
+    }
+}
+
+// MARK: - Generic List Protocol
+protocol ListRowData {
+    var id: String { get }
+    var primaryText: String { get }
+    var secondaryText: String { get }
+}
+
+extension JobItem: ListRowData {
+    var id: String { jobId }
+    var primaryText: String { jobTitle }
+    var secondaryText: String { company }
+}
+
+extension ResumeItem: ListRowData {
+    var primaryText: String { name }
+    var secondaryText: String { DateFormatter.shortDate.string(from: dateCreated) }
+}
+
+// MARK: - Generic Row View
+struct GenericRowView<T: ListRowData>: View {
+    let item: T
+    let isSelected: Bool
+    @State private var isHovered = false
+    
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 4) {
+            Text(item.primaryText)
+                .font(isSelected ? .title2 : .headline)
+                .fontWeight(.light)
+                .foregroundColor(.black.opacity(isSelected ? 1.0 : (isHovered ? 1.0 : 0.5)))
+                .lineLimit(1)
+                .animation(.easeInOut(duration: 0.2), value: isSelected)
+                .animation(.easeInOut(duration: 0.15), value: isHovered)
+            
+            Text(item.secondaryText)
+                .font(isSelected ? .body : .caption)
+                .fontWeight(.light)
+                .foregroundColor(.black.opacity(isSelected ? 1.0 : (isHovered ? 1.0 : 0.5)))
+                .animation(.easeInOut(duration: 0.2), value: isSelected)
+                .animation(.easeInOut(duration: 0.15), value: isHovered)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .background(Color.clear)
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovered = hovering
+            }
+        }
+    }
+}
+
+// MARK: - Job List View
+struct JobListView: View {
+    let jobs: [JobItem]
+    @Binding var selectedJob: JobItem?
+    let onDelete: (JobItem) -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Job List - takes remaining space
+            if jobs.isEmpty {
+                VStack(spacing: 12) {
+                    Spacer()
+                    Image(systemName: "briefcase")
+                        .font(.system(size: 32))
+                        .foregroundColor(.secondary)
+                    Text("No analyzed jobs")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                    Text("Use the Safari extension to analyze jobs")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(jobs, id: \.jobId) { job in
+                            GenericRowView(
+                                item: job,
+                                isSelected: selectedJob?.jobId == job.jobId
+                            )
+                            .onTapGesture {
+                                selectedJob = job
+                            }
+                            .contextMenu {
+                                Button("Delete", role: .destructive) {
+                                    onDelete(job)
+                                }
+                                Button("Like") {
+                                    // TODO: Implement like functionality
+                                    print("Like job: \(job.jobTitle)")
+                                }
+                                Button("View on LinkedIn") {
+                                    // TODO: Implement LinkedIn view functionality
+                                    print("View on LinkedIn: \(job.jobTitle)")
+                                }
+                            }
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            
+            // Bottom Actions - aligned with right panel bottom
+            HStack {
+                Spacer()
+                
+                Button(action: {
+                    // No action for jobs - they come from Safari extension
+                }) {
+                    Image(systemName: "briefcase.badge.plus")
+                        .font(.system(size: 16, weight: .light))
+                        .foregroundColor(.gray)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .disabled(true) // Jobs are added via Safari extension
+                .padding(.trailing, 16)
+                .padding(.bottom, 16)
+            }
+        }
+    }
+}
+
+
+// MARK: - Job Detail View
+struct JobDetailView: View {
+    let job: JobItem?
+    let horizontalPadding: CGFloat
+    let jobs: [JobItem]
+    
+    var body: some View {
+        if let job = job {
+            ResumeContentView(
+                text: formatJobContent(job),
+                bottomLabel: "",
+                horizontalPadding: horizontalPadding
+            )
+        } else {
+            VStack(spacing: 16) {
+                Image(systemName: "briefcase")
+                    .font(.system(size: 48))
+                    .foregroundColor(.secondary)
+                
+                if jobs.isEmpty {
+                    Text("Please proceed job analysis via the Safari extension")
+                        .font(.title2)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                } else {
+                    Text("Select a job to continue")
+                        .font(.title2)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+    
+    private func formatJobContent(_ job: JobItem) -> String {
+        return """
+        📊 **Job Analysis Report**
+        
+        🏢 **Company:** \(job.company)
+        💼 **Position:** \(job.jobTitle)
+        📅 **Analyzed:** \(DateFormatter.shortDate.string(from: job.dateAnalyzed))
+        
+        🎯 **Final Score:** \(String(format: "%.1f", job.analysisScores.finalScore)) / 4.0
+        
+        📋 **Detailed Scores:**
+        • Years of Experience: Fit \(String(format: "%.1f", job.analysisScores.yearsOfExperienceFit)) | Gap \(String(format: "%.1f", job.analysisScores.yearsOfExperienceGap))
+        • Education: Fit \(String(format: "%.1f", job.analysisScores.educationFit)) | Gap \(String(format: "%.1f", job.analysisScores.educationGap))
+        • Technical Skills: Fit \(String(format: "%.1f", job.analysisScores.technicalSkillsFit)) | Gap \(String(format: "%.1f", job.analysisScores.technicalSkillsGap))
+        • Relevant Experience: Fit \(String(format: "%.1f", job.analysisScores.relevantExperienceFit)) | Gap \(String(format: "%.1f", job.analysisScores.relevantExperienceGap))
+        
+        📝 **Job Description:**
+        \(job.cleanedJobDescription)
+        
+        🔍 **Analysis Result:**
+        \(job.analysisResult)
+        """
     }
 }
 

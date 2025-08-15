@@ -15,6 +15,9 @@ struct SafariAnalysisRequest: Codable {
     let id: String
     let resumeText: String
     let jobDescription: String
+    let jobTitle: String?      // Job title extracted from page
+    let company: String?       // Company name extracted from page
+    let pageUrl: String?       // URL of the job posting
     let timestamp: Date
 }
 
@@ -23,6 +26,13 @@ struct SafariAnalysisResponse: Codable {
     let results: String?
     let error: String?
     let timestamp: Date
+    let scores: AnalysisScores?
+}
+
+struct AnalysisScores: Codable {
+    let fitScores: [Double]
+    let gapScores: [Double]
+    let finalScore: Double
 }
 
 class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
@@ -116,6 +126,68 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             if messageContent == "getAvailableResumes" {
                 let resumes = getAvailableResumes()
                 sendResponse(["status": "success", "resumes": resumes], context: context)
+                return
+            }
+            
+            // Handle job metadata storage from extension
+            if messageContent == "storeJobMetadata" {
+                if let data = messageDict["data"] as? [String: Any] {
+                    let jobTitle = data["jobTitle"] as? String ?? "Unknown Position"
+                    let company = data["company"] as? String ?? "Unknown Company"
+                    let pageUrl = data["pageUrl"] as? String ?? "unknown"
+                    
+                    // Store in shared defaults for native app access
+                    sharedDefaults.set(jobTitle, forKey: "currentJobTitle")
+                    sharedDefaults.set(company, forKey: "currentCompany")
+                    sharedDefaults.set(pageUrl, forKey: "currentPageUrl")
+                    
+                    log("💾 Job metadata stored - Title: '\(jobTitle)', Company: '\(company)'")
+                    sendResponse(["status": "success", "message": "Job metadata stored"], context: context)
+                } else {
+                    sendResponse(["status": "error", "message": "Invalid metadata format"], context: context)
+                }
+                return
+            }
+            
+            // Handle score retrieval for background.js logging
+            if messageContent == "getLastAnalysisScores" {
+                if let storedScores = sharedDefaults.object(forKey: "lastAnalysisScores") as? [String: Any] {
+                    sendResponse(["status": "success", "scores": storedScores], context: context)
+                } else {
+                    sendResponse(["status": "error", "message": "No scores available"], context: context)
+                }
+                return
+            }
+            
+            // Handle stop analysis command
+            if messageContent == "stopAnalysis" {
+                // Send stop command to background service
+                sharedDefaults.set("stop", forKey: "stopAnalysisCommand")
+                
+                // Also set local flags for immediate response
+                sharedDefaults.set("stopped", forKey: "safariAnalysisStatus")
+                sharedDefaults.set("stopped", forKey: "analysisStatus")
+                
+                // Clear any pending requests
+                sharedDefaults.removeObject(forKey: "safariAnalysisRequest")
+                sharedDefaults.removeObject(forKey: "analysisRequest")
+                
+                log("🛑 Analysis stopped - background processing will be halted")
+                sendResponse(["status": "success", "message": "Analysis stopped"], context: context)
+                return
+            }
+            
+            // Handle resume analysis command
+            if messageContent == "resumeAnalysis" {
+                // Send resume command to background service
+                sharedDefaults.set("resume", forKey: "resumeAnalysisCommand")
+                
+                // Also set local flags for immediate response
+                sharedDefaults.set("pending", forKey: "safariAnalysisStatus")
+                sharedDefaults.set("pending", forKey: "analysisStatus")
+                
+                log("▶️ Analysis resumed - background processing will continue")
+                sendResponse(["status": "success", "message": "Analysis resumed"], context: context)
                 return
             }
             
@@ -222,14 +294,30 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 
                 log("🔄 Starting single request 4-cycle analysis via background server...")
                 
-                // Send analysis request to background server with fourRun method
+                // Clear old scores to prevent contamination from previous job analysis
+                sharedDefaults.removeObject(forKey: "lastAnalysisScores")
+                sharedDefaults.removeObject(forKey: "safariAnalysisResponse")
+                log("🧹 Cleared old scores and response data to prevent contamination")
+                
+                // Extract job metadata from shared defaults (set by JavaScript)
+                let jobTitle = sharedDefaults.string(forKey: "currentJobTitle") ?? extractJobTitleFromPageText(pageText)
+                let company = sharedDefaults.string(forKey: "currentCompany") ?? extractCompanyFromPageText(pageText)
+                let pageUrl = sharedDefaults.string(forKey: "currentPageUrl") ?? "unknown"
+                
+                log("📋 Job Metadata - Title: '\(jobTitle)', Company: '\(company)'")
+                log("🔍 Metadata source - Title from JS: \(sharedDefaults.string(forKey: "currentJobTitle") != nil ? "YES" : "NO"), Company from JS: \(sharedDefaults.string(forKey: "currentCompany") != nil ? "YES" : "NO")")
+                
+                // Send analysis request to background server with job metadata
                 let results = try await requestFourCycleAnalysisFromBackgroundServer(
                     resumeText: resumeData,
-                    jobDescription: pageText
+                    jobDescription: pageText,
+                    jobTitle: jobTitle,
+                    company: company,
+                    pageUrl: pageUrl
                 )
                 
-                // Extract combined score from 4-cycle analysis results  
-                let (rawScore, processedScore) = extractFourCycleScore(from: results)
+                // Get the response with scores calculated by background service
+                let (rawScore, processedScore) = getScoresFromBackgroundResponse()
                 
                 log("✅ 4-Cycle analysis complete: \(processedScore)")
                 sendFinalResponseWithScores(score: processedScore, rawScore: rawScore, context: context)
@@ -250,6 +338,11 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 let analysisMethod = getAnalysisMethodFromSharedDefaults()
                 
                 log("🔄 Phase 1: Starting YOE Analysis using \(analysisMethod) method...")
+                
+                // Clear old scores to prevent contamination from previous job analysis
+                sharedDefaults.removeObject(forKey: "lastAnalysisScores")
+                sharedDefaults.removeObject(forKey: "safariAnalysisResponse")
+                log("🧹 Cleared old scores and response data to prevent contamination")
                 
                 // Send request to WhatYOE - let it handle all prompt logic
                 let results = try await requestAnalysisFromWhatYOE(
@@ -282,6 +375,11 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 
                 log("🔄 Phase 2: Starting Education Analysis using \(analysisMethod) method...")
                 
+                // Clear old scores to prevent contamination from previous job analysis
+                sharedDefaults.removeObject(forKey: "lastAnalysisScores")
+                sharedDefaults.removeObject(forKey: "safariAnalysisResponse")
+                log("🧹 Cleared old scores and response data to prevent contamination")
+                
                 // Send request to WhatYOE - let it handle all prompt logic
                 let results = try await requestAnalysisFromWhatYOE(
                     resumeText: resumeData,
@@ -313,6 +411,11 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 
                 log("🔄 Phase 3: Starting Skills Analysis using \(analysisMethod) method...")
                 
+                // Clear old scores to prevent contamination from previous job analysis
+                sharedDefaults.removeObject(forKey: "lastAnalysisScores")
+                sharedDefaults.removeObject(forKey: "safariAnalysisResponse")
+                log("🧹 Cleared old scores and response data to prevent contamination")
+                
                 // Send request to WhatYOE - let it handle all prompt logic
                 let results = try await requestAnalysisFromWhatYOE(
                     resumeText: resumeData,
@@ -321,7 +424,7 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 )
                 
                 // Extract Skills score from results (0-3 scale)
-                let score = extractPhaseScore(from: results, phase: "Technical Skills")
+                let score = extractPhaseScore(from: results, phase: "Skills")
                 
                 log("✅ Phase 3 complete: \(score)")
                 setProgress(stage: "round_3", message: "Phase 3 Complete: \(score)")
@@ -344,6 +447,11 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 
                 log("🔄 Phase 4: Starting Experience Analysis using \(analysisMethod) method...")
                 
+                // Clear old scores to prevent contamination from previous job analysis
+                sharedDefaults.removeObject(forKey: "lastAnalysisScores")
+                sharedDefaults.removeObject(forKey: "safariAnalysisResponse")
+                log("🧹 Cleared old scores and response data to prevent contamination")
+                
                 // Send request to WhatYOE - let it handle all prompt logic
                 let results = try await requestAnalysisFromWhatYOE(
                     resumeText: resumeData,
@@ -352,10 +460,10 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 )
                 
                 // Extract Experience score from results (0-3 scale)
-                let score = extractPhaseScore(from: results, phase: "Relevant Experience")
+                let score = extractPhaseScore(from: results, phase: "Experience")
                 
                 log("✅ Phase 4 complete: \(score)")
-                setProgress(stage: "final_score", message: "Final Score: \(score)")
+                setProgress(stage: "round_4", message: "Phase 4 Complete: \(score)")
                 
                 // Send response for Phase 4
                 sendPhaseResponse(phase: "phase4", score: score, rawScore: score, context: context)
@@ -368,14 +476,22 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     }
     
     
-    private func requestFourCycleAnalysisFromBackgroundServer(resumeText: String, jobDescription: String) async throws -> String {
-        // Create analysis request
+    private func requestFourCycleAnalysisFromBackgroundServer(resumeText: String, jobDescription: String, jobTitle: String, company: String, pageUrl: String) async throws -> String {
+        // Create analysis request with job metadata
         let request = SafariAnalysisRequest(
             id: UUID().uuidString,
             resumeText: resumeText,
             jobDescription: jobDescription,
+            jobTitle: jobTitle,
+            company: company,
+            pageUrl: pageUrl,
             timestamp: Date()
         )
+        
+        // Clear old scores and response data to prevent contamination
+        sharedDefaults.removeObject(forKey: "lastAnalysisScores")
+        sharedDefaults.removeObject(forKey: "safariAnalysisResponse")
+        log("🧹 Cleared old scores and response data before starting new analysis")
         
         // Store request in shared defaults with fourRun method specified
         if let requestData = try? JSONEncoder().encode(request) {
@@ -395,13 +511,26 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     }
     
     private func requestAnalysisFromWhatYOE(resumeText: String, jobDescription: String, phase: String) async throws -> String {
-        // Create analysis request - let WhatYOE handle all prompt logic
+        // Extract job metadata for phase analysis too
+        let jobTitle = sharedDefaults.string(forKey: "currentJobTitle") ?? extractJobTitleFromPageText(jobDescription)
+        let company = sharedDefaults.string(forKey: "currentCompany") ?? extractCompanyFromPageText(jobDescription)
+        let pageUrl = sharedDefaults.string(forKey: "currentPageUrl") ?? "unknown"
+        
+        // Create analysis request with job metadata
         let request = SafariAnalysisRequest(
             id: UUID().uuidString,
             resumeText: resumeText,
             jobDescription: jobDescription,
+            jobTitle: jobTitle,
+            company: company,
+            pageUrl: pageUrl,
             timestamp: Date()
         )
+        
+        // Clear old scores and response data to prevent contamination
+        sharedDefaults.removeObject(forKey: "lastAnalysisScores")
+        sharedDefaults.removeObject(forKey: "safariAnalysisResponse")
+        log("🧹 Cleared old scores and response data before starting new phase analysis")
         
         // Store request in shared defaults
         if let requestData = try? JSONEncoder().encode(request) {
@@ -445,9 +574,8 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                let response = try? JSONDecoder().decode(SafariAnalysisResponse.self, from: responseData),
                response.requestId == requestId {
                 
-                // Clean up
+                // Clean up request and status ONLY (keep response for score extraction)
                 sharedDefaults.removeObject(forKey: "safariAnalysisRequest")
-                sharedDefaults.removeObject(forKey: "safariAnalysisResponse")
                 sharedDefaults.removeObject(forKey: "safariAnalysisStatus")
                 
                 if let error = response.error {
@@ -503,106 +631,122 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         return true
     }
     
+    // MARK: - Job Information Extraction
+    
+    private func extractJobTitleFromPageText(_ pageText: String) -> String {
+        // More sophisticated job title extraction
+        let lines = pageText.components(separatedBy: .newlines)
+        
+        // First, try to find lines that look like job titles
+        for line in lines {
+            let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Skip very long lines (likely descriptions) or very short lines
+            if trimmedLine.count > 80 || trimmedLine.count < 3 {
+                continue
+            }
+            
+            // Look for job title patterns with better context
+            let jobTitlePatterns = [
+                "Engineer", "Developer", "Manager", "Analyst", "Specialist", "Director", 
+                "Senior", "Lead", "Principal", "Staff", "Consultant", "Architect",
+                "Intern", "Associate", "Coordinator", "Representative", "Designer",
+                "Scientist", "Researcher", "Advisor", "Officer", "Executive"
+            ]
+            
+            // Check if line contains job title patterns and doesn't look like a description
+            if jobTitlePatterns.contains(where: { trimmedLine.contains($0) }) &&
+               !trimmedLine.contains("experience") &&
+               !trimmedLine.contains("requirements") &&
+               !trimmedLine.contains("responsibilities") {
+                return trimmedLine
+            }
+        }
+        
+        // If no clear pattern found, try to extract from the first few lines
+        let firstLines = Array(lines.prefix(10))
+        for line in firstLines {
+            let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmedLine.count > 5 && trimmedLine.count < 60 {
+                // Check if it looks like a job title (not a description)
+                if !trimmedLine.contains(".") && !trimmedLine.contains("experience") {
+                    return trimmedLine
+                }
+            }
+        }
+        
+        return "Software Engineer" // Final fallback
+    }
+    
+    private func extractCompanyFromPageText(_ pageText: String) -> String {
+        // More sophisticated company extraction
+        let lines = pageText.components(separatedBy: .newlines)
+        
+        // First, try to find lines with company indicators
+        for line in lines {
+            let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Look for lines with company indicators
+            if trimmedLine.contains("Inc.") || trimmedLine.contains("LLC") || 
+               trimmedLine.contains("Corp") || trimmedLine.contains("Ltd") ||
+               trimmedLine.contains("Company") || trimmedLine.contains("Corporation") ||
+               trimmedLine.contains("Limited") || trimmedLine.contains("Group") {
+                return trimmedLine
+            }
+        }
+        
+        // If no company indicators found, try to extract from the first few lines
+        let firstLines = Array(lines.prefix(15))
+        for line in firstLines {
+            let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Look for lines that might be company names (not job descriptions)
+            if trimmedLine.count > 2 && trimmedLine.count < 50 &&
+               !trimmedLine.contains("experience") &&
+               !trimmedLine.contains("requirements") &&
+               !trimmedLine.contains("responsibilities") &&
+               !trimmedLine.contains("skills") &&
+               !trimmedLine.contains("qualifications") {
+                
+                // Check if it looks like a company name (capitalized, no periods in middle)
+                let words = trimmedLine.components(separatedBy: " ")
+                if words.count <= 4 && words.allSatisfy({ $0.first?.isUppercase == true }) {
+                    return trimmedLine
+                }
+            }
+        }
+        
+        return "Tech Company" // Final fallback
+    }
+    
     // MARK: - Score Processing
     
-    private func extractFourCycleScore(from response: String) -> (String, String) {
-        // Log the raw response to debug what we're getting
-        log("🔍 Raw WhatYOE response (first 500 chars): \(String(response.prefix(500)))")
-        log("🔍 Response length: \(response.count) characters")
-        
-        // Extract all 8 scores from 4-cycle analysis (4 fit + 4 gap scores, 0-3 scale each)
-        // Try multiple patterns to be more flexible
-        let fitScorePatterns = [
-            #"Fit Score:\s*(\d+)"#,
-            #"\*\*Fit Score:\*\*\s*\[?(\d+)\]?"#,
-            #"Fit Score:\s*\[(\d+)\]"#
-        ]
-        let gapScorePatterns = [
-            #"Gap Score:\s*(\d+)"#,
-            #"\*\*Gap Score:\*\*\s*\[?(\d+)\]?"#,
-            #"Gap Score:\s*\[(\d+)\]"#
-        ]
-        
-        var fitScores: [Int] = []
-        var gapScores: [Int] = []
-        let nsString = response as NSString
-        
-        // Extract Fit Scores - try multiple patterns
-        for pattern in fitScorePatterns {
-            if let fitRegex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
-                let fitResults = fitRegex.matches(in: response, options: [], range: NSRange(location: 0, length: nsString.length))
-                
-                for result in fitResults {
-                    if result.numberOfRanges > 1 {
-                        let scoreRange = result.range(at: 1)
-                        let scoreString = nsString.substring(with: scoreRange)
-                        if let score = Int(scoreString), score >= 0 && score <= 3 {
-                            fitScores.append(score)
-                        }
-                    }
-                }
-                
-                if !fitScores.isEmpty {
-                    log("🎯 Found fit scores using pattern: \(pattern)")
-                    break
-                }
-            }
-        }
-        
-        // Extract Gap Scores - try multiple patterns
-        for pattern in gapScorePatterns {
-            if let gapRegex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
-                let gapResults = gapRegex.matches(in: response, options: [], range: NSRange(location: 0, length: nsString.length))
-                
-                for result in gapResults {
-                    if result.numberOfRanges > 1 {
-                        let scoreRange = result.range(at: 1)
-                        let scoreString = nsString.substring(with: scoreRange)
-                        if let score = Int(scoreString), score >= 0 && score <= 3 {
-                            gapScores.append(score)
-                        }
-                    }
-                }
-                
-                if !gapScores.isEmpty {
-                    log("🎯 Found gap scores using pattern: \(pattern)")
-                    break
-                }
-            }
-        }
-        
-        // Calculate final score using your formula
-        let fitMultiplier = 1.0  // You can adjust this
-        let gapMultiplier = 1.0  // You can adjust this
-        
-        let finalScore: Double
-        if fitScores.count == 4 && gapScores.count == 4 {
-            let fitSum = Double(fitScores.reduce(0, +))
-            let gapSum = Double(gapScores.reduce(0, +))
+    private func getScoresFromBackgroundResponse() -> (String, String) {
+        // Get scores from the background service response
+        if let responseData = sharedDefaults.data(forKey: "safariAnalysisResponse"),
+           let response = try? JSONDecoder().decode(SafariAnalysisResponse.self, from: responseData),
+           let scores = response.scores {
             
-            // Formula: (sum of fit * multiplier + sum of gap * multiplier) / 8
-            finalScore = (fitSum * fitMultiplier + gapSum * gapMultiplier) / 8.0
-        } else {
-            log("⚠️ Expected 4 fit and 4 gap scores, got \(fitScores.count) fit and \(gapScores.count) gap")
-            finalScore = 0.0
+            let finalScore = scores.finalScore
+            let processedScoreString = String(format: "%.1f", finalScore)
+            let rawEstimate = String(Int(finalScore.rounded()))
+            
+            // Store scores for background.js logging
+            let allScores: [String: Any] = [
+                "fitScores": scores.fitScores,
+                "gapScores": scores.gapScores,
+                "finalScore": finalScore
+            ]
+            sharedDefaults.set(allScores, forKey: "lastAnalysisScores")
+            
+            log("📊 Using scores from background service - Final: \(finalScore)")
+            return (rawEstimate, processedScoreString)
         }
         
-        let processedScoreString = String(format: "%.1f", finalScore)
-        let rawEstimate = Int(finalScore.rounded())
-        
-        log("🔢 Extracted 8 scores - Fit: \(fitScores), Gap: \(gapScores)")
-        log("🔢 Final calculation: (Fit sum: \(fitScores.reduce(0, +)) * \(fitMultiplier) + Gap sum: \(gapScores.reduce(0, +)) * \(gapMultiplier)) / 8 = \(finalScore)")
-        
-        // Store scores for background.js logging
-        let allScores: [String: Any] = [
-            "fitScores": fitScores,
-            "gapScores": gapScores,
-            "finalScore": finalScore
-        ]
-        sharedDefaults.set(allScores, forKey: "lastAnalysisScores")
-        
-        return (String(rawEstimate), processedScoreString)
+        log("⚠️ No scores available from background service, using fallback")
+        return ("0", "0.0")
     }
+    
     
     // MARK: - Progress Management
     private func setProgress(stage: String, message: String) {
@@ -638,31 +782,42 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     private func sendFinalResponseWithScores(score: String, rawScore: String, context: NSExtensionContext) {
         log("📊 Sending final result with scores: \(score)")
         
-        // Get the stored scores from extractFourCycleScore
-        let storedScores = sharedDefaults.object(forKey: "lastAnalysisScores") as? [String: Any]
-        
-        log("🔍 DEBUG: storedScores = \(String(describing: storedScores))")
-        
         var responseDict: [String: Any] = [
             "aiAnalysis": score,
             "rawScore": rawScore,
             "status": "success"
         ]
         
-        // Add scores if available
-        if let scores = storedScores {
-            responseDict["scores"] = scores
-            log("✅ DEBUG: Added scores to response")
+        var attachedScores: [String: Any]? = nil
+        
+        // Only use scores from the freshest background service response
+        if let responseData = sharedDefaults.data(forKey: "safariAnalysisResponse"),
+           let response = try? JSONDecoder().decode(SafariAnalysisResponse.self, from: responseData),
+           let scores = response.scores {
+            let allScores: [String: Any] = [
+                "fitScores": scores.fitScores,
+                "gapScores": scores.gapScores,
+                "finalScore": scores.finalScore
+            ]
+            attachedScores = allScores
+            // Keep lastAnalysisScores in sync for background.js logging only (not for fallback)
+            sharedDefaults.set(allScores, forKey: "lastAnalysisScores")
+            log("✅ DEBUG: Using fresh scores from safariAnalysisResponse")
+        }
+        
+        // Removed fallback to lastAnalysisScores to prevent score contamination between jobs
+        
+        if let attachedScores = attachedScores {
+            responseDict["scores"] = attachedScores
         } else {
-            log("❌ DEBUG: No stored scores found")
+            log("ℹ️ DEBUG: No fresh scores available for this job - analysis may still be in progress")
         }
         
         log("🔍 DEBUG: Final responseDict = \(responseDict)")
         
-        let response = NSExtensionItem()
-        response.userInfo = [SFExtensionMessageKey: responseDict]
-        
-        context.completeRequest(returningItems: [response], completionHandler: nil)
+        let responseItem = NSExtensionItem()
+        responseItem.userInfo = [SFExtensionMessageKey: responseDict]
+        context.completeRequest(returningItems: [responseItem], completionHandler: nil)
     }
     
     private func sendPhaseResponse(phase: String, score: String, rawScore: String, context: NSExtensionContext) {

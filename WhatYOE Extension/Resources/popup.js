@@ -156,6 +156,16 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Ensure content script is loaded
             await ensureContentScript();
             
+            // Resume background processing if it was stopped
+            try {
+                await browser.runtime.sendNativeMessage("com.kuangming.WhatYOE", {
+                    message: "resumeAnalysis"
+                });
+                console.log("✅ Resume command sent to native app");
+            } catch (nativeError) {
+                console.log("⚠️ Could not send resume command to native app:", nativeError);
+            }
+            
             // Send analysis command to content script
             const response = await browser.tabs.sendMessage(currentTab.id, {
                 action: 'startAnalysis',
@@ -187,6 +197,16 @@ document.addEventListener('DOMContentLoaded', async function() {
             await browser.tabs.sendMessage(currentTab.id, {
                 action: 'stopAnalysis'
             });
+            
+            // Also send stop command to native app to halt background processing
+            try {
+                await browser.runtime.sendNativeMessage("com.kuangming.WhatYOE", {
+                    message: "stopAnalysis"
+                });
+                console.log("✅ Stop command sent to native app");
+            } catch (nativeError) {
+                console.log("⚠️ Could not send stop command to native app:", nativeError);
+            }
         } catch (error) {
             console.log('Could not send stop command to content script');
         }

@@ -56,20 +56,20 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
             card.querySelector('.yoe-ai-label')?.remove();
             card.querySelector('.yoe-progress-label')?.remove(); // Clear progress label too
 
-            // Determine color and text for the label based on AI score (0-3 scale)
+            // Determine color and text for the label based on AI score with updated rating scale
             let text, color;
             if (typeof result.score === 'number') {
-                if (result.score === 0) {
-                    text = `Poor: ${result.score}`;
+                if (result.score >= 0 && result.score < 1.3) {
+                    text = `Reject: ${result.score.toFixed(1)}`;
                     color = '#dc3545'; // Red
-                } else if (result.score === 1) {
-                    text = `Fair: ${result.score}`;
+                } else if (result.score >= 1.3 && result.score < 2.0) {
+                    text = `Poor: ${result.score.toFixed(1)}`;
                     color = '#fd7e14'; // Orange
-                } else if (result.score === 2) {
-                    text = `Good: ${result.score}`;
+                } else if (result.score >= 2.0 && result.score < 2.7) {
+                    text = `Maybe: ${result.score.toFixed(1)}`;
                     color = '#ffc107'; // Yellow
-                } else if (result.score === 3) {
-                    text = `Strong: ${result.score}`;
+                } else if (result.score >= 2.7) {
+                    text = `Good: ${result.score.toFixed(1)}`;
                     color = '#28a745'; // Green
                 } else {
                     text = 'Unknown';
@@ -140,11 +140,61 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
                 .filter(line => line.length > 0)
                 .join('\n');
         }
+
+        extractJobTitle() {
+            // Try multiple selectors for job title
+            const selectors = [
+                '.job-details-jobs-unified-top-card__job-title h1 a',
+                '.job-details-jobs-unified-top-card__job-title h1',
+                '.t-24.job-details-jobs-unified-top-card__job-title h1 a',
+                '.t-24.job-details-jobs-unified-top-card__job-title h1',
+                'h1.t-24.t-bold.inline a',
+                'h1.t-24.t-bold.inline'
+            ];
+            
+            for (const selector of selectors) {
+                const element = document.querySelector(selector);
+                if (element && element.textContent.trim()) {
+                    console.log(`✅ Found job title with selector: ${selector}`);
+                    return element.textContent.trim();
+                }
+            }
+            
+            console.warn('⚠️ Could not extract job title, using fallback');
+            return 'Unknown Position';
+        }
+
+        extractCompany() {
+            // Try multiple selectors for company name
+            const selectors = [
+                '.job-details-jobs-unified-top-card__company-name a',
+                '.job-details-jobs-unified-top-card__company-name',
+                '[class*="job-details-jobs-unified-top-card__company-name"] a',
+                '[class*="job-details-jobs-unified-top-card__company-name"]'
+            ];
+            
+            for (const selector of selectors) {
+                const element = document.querySelector(selector);
+                if (element && element.textContent.trim()) {
+                    console.log(`✅ Found company with selector: ${selector}`);
+                    return element.textContent.trim();
+                }
+            }
+            
+            console.warn('⚠️ Could not extract company, using fallback');
+            return 'Unknown Company';
+        }
         
         async runSingleRequestAnalysis(description, card) {
             try {
                 // Show analyzing status
                 this.applyProgressLabel(card, "Analyzing...", "#6c757d");
+                
+                // Extract job metadata from LinkedIn page
+                const jobTitle = this.extractJobTitle();
+                const company = this.extractCompany();
+                
+                console.log(`📋 [YOE AI] Extracted - Title: "${jobTitle}", Company: "${company}"`);
                 
                 // Single request for 4-cycle analysis
                 const analysisResult = await browser.runtime.sendMessage({
@@ -155,18 +205,28 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
                         wordCount: description.trim().split(/\s+/).filter(word => word.length > 0).length,
                         title: document.title,
                         url: window.location.href,
+                        jobTitle: jobTitle,
+                        company: company,
                         timestamp: Date.now()
                     }
                 });
                 
                 // Don't show "Analysis Complete" - let the final score label replace the progress label
                 
-                // Return result
-                return {
+                // Return result with scores if available
+                const result = {
                     success: true,
                     aiAnalysis: analysisResult?.result?.aiAnalysis || "0.0",
                     analysisResult: analysisResult
                 };
+                
+                // Include scores if they're available in the response
+                if (analysisResult?.scores) {
+                    result.scores = analysisResult.scores;
+                    console.log(`📊 [YOE AI] Scores included in response:`, analysisResult.scores);
+                }
+                
+                return result;
                 
             } catch (error) {
                 console.error('❌ Single request analysis failed:', error);
@@ -296,17 +356,34 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
                             
                             // Single request 4-cycle analysis
                             const response = await this.runSingleRequestAnalysis(description, card);
+                            
+                            // Debug: Log the full response structure
+                            console.log(`🔍 [YOE AI] Full response from background:`, response);
+                            console.log(`🔍 [YOE AI] Response keys:`, response ? Object.keys(response) : "No response");
+                            if (response?.scores) {
+                                console.log(`🔍 [YOE AI] Scores object:`, response.scores);
+                            }
 
-                        // Parse score from AI response
-                        const aiAnalysis = response?.aiAnalysis || "0.0";
-                        // Convert decimal score to 0-3 integer scale
-                        const decimalScore = parseFloat(aiAnalysis) || 0;
-                        const score = Math.round(decimalScore);
+                        // Parse score from AI response (now comes pre-calculated from background service)
+                        let score = 0;
                         
-                        console.log(`🤖 [YOE AI] AI returned: "${aiAnalysis}" → score: ${score}`);
+                        // First try to get score from the scores object in the response
+                        if (response?.scores?.finalScore !== undefined) {
+                            score = response.scores.finalScore;
+                            console.log(`🤖 [YOE AI] Got score from response.scores.finalScore: ${score}`);
+                        } else if (response?.aiAnalysis) {
+                            // Fallback to the old method
+                            const aiAnalysis = response.aiAnalysis;
+                            score = parseFloat(aiAnalysis) || 0;
+                            console.log(`🤖 [YOE AI] Got score from response.aiAnalysis: "${aiAnalysis}" → ${score}`);
+                        } else {
+                            console.log(`⚠️ [YOE AI] No score found in response:`, response);
+                        }
                         
-                        // Apply label to job card
-                        if (score >= 0 && score <= 3) {
+                        console.log(`🤖 [YOE AI] Final score: ${score}`);
+                        
+                        // Apply label to job card (now using decimal scores)
+                        if (score >= 0) {
                             const result = { score: score };
                             this.analysisResults.set(jobId, result);
                             this.applyHighlight(card, result);
@@ -371,10 +448,10 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
         getStats() {
             let stats = { 
                 totalJobs: 0, 
+                reject: 0,
                 poor: 0,
-                fair: 0,
+                maybe: 0,
                 good: 0,
-                strong: 0,
                 isAnalyzing: this.isAnalyzing 
             };
             
@@ -383,14 +460,14 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
                 
                 // Only process valid numerical scores (0-3 scale)
                 if (typeof result.score === 'number') {
-                    if (result.score === 0) {
+                    if (result.score >= 0 && result.score < 1.3) {
+                        stats.reject++;
+                    } else if (result.score >= 1.3 && result.score < 2.0) {
                         stats.poor++;
-                    } else if (result.score === 1) {
-                        stats.fair++;
-                    } else if (result.score === 2) {
+                    } else if (result.score >= 2.0 && result.score < 2.7) {
+                        stats.maybe++;
+                    } else if (result.score >= 2.7) {
                         stats.good++;
-                    } else if (result.score === 3) {
-                        stats.strong++;
                     }
                 }
             });

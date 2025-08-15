@@ -27,6 +27,9 @@
 		BE476BB12E4E430E002A4D78 /* SwiftUIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BB02E4E430E002A4D78 /* SwiftUIApp.swift */; };
 		BE476BB42E4E430E002A4D78 /* AnalysisManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BAD2E4E430E002A4D78 /* AnalysisManager.swift */; };
 		BE476BB52E4E430E002A4D78 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BAE2E4E430E002A4D78 /* ContentView.swift */; };
+		BE476BB72E4F79CB002A4D78 /* JobManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BB62E4F79CB002A4D78 /* JobManager.swift */; };
+		BE476BB92E4F79DE002A4D78 /* JobManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BB82E4F79DE002A4D78 /* JobManager.swift */; };
+		BE476BBB2E4F8D09002A4D78 /* ScoreCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BBA2E4F8D09002A4D78 /* ScoreCalculator.swift */; };
 		BE9C41AA2E43EA9700073E0D /* FoundationModels.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE9C41A92E43EA9700073E0D /* FoundationModels.framework */; };
 		BE9C41B42E44029700073E0D /* popup.html in Resources */ = {isa = PBXBuildFile; fileRef = BE9C41B22E44029700073E0D /* popup.html */; };
 		BE9C41B52E44029700073E0D /* content.js in Resources */ = {isa = PBXBuildFile; fileRef = BE9C41B12E44029700073E0D /* content.js */; };
@@ -83,6 +86,9 @@
 		BE476BAD2E4E430E002A4D78 /* AnalysisManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisManager.swift; sourceTree = "<group>"; };
 		BE476BAE2E4E430E002A4D78 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		BE476BB02E4E430E002A4D78 /* SwiftUIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftUIApp.swift; sourceTree = "<group>"; };
+		BE476BB62E4F79CB002A4D78 /* JobManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobManager.swift; sourceTree = "<group>"; };
+		BE476BB82E4F79DE002A4D78 /* JobManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobManager.swift; sourceTree = "<group>"; };
+		BE476BBA2E4F8D09002A4D78 /* ScoreCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreCalculator.swift; sourceTree = "<group>"; };
 		BE9C41A92E43EA9700073E0D /* FoundationModels.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FoundationModels.framework; path = System/Library/Frameworks/FoundationModels.framework; sourceTree = SDKROOT; };
 		BE9C41B12E44029700073E0D /* content.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = content.js; sourceTree = "<group>"; };
 		BE9C41B22E44029700073E0D /* popup.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = popup.html; sourceTree = "<group>"; };
@@ -147,7 +153,9 @@
 		6045B8E3249289520091386F /* WhatYOE */ = {
 			isa = PBXGroup;
 			children = (
+				BE476BBA2E4F8D09002A4D78 /* ScoreCalculator.swift */,
 				BE476BA82E4D40A0002A4D78 /* PromptTemplates.swift */,
+				BE476BB62E4F79CB002A4D78 /* JobManager.swift */,
 				BE476BA92E4D40A0002A4D78 /* ResumeManager.swift */,
 				BE476B6F2E4BC195002A4D78 /* main.swift */,
 				6045B8E4249289520091386F /* Native_Messaging_Demo.entitlements */,
@@ -196,6 +204,7 @@
 		BE476B992E4CF04F002A4D78 /* WhatYOE-Desktop */ = {
 			isa = PBXGroup;
 			children = (
+				BE476BB82E4F79DE002A4D78 /* JobManager.swift */,
 				BE476BAD2E4E430E002A4D78 /* AnalysisManager.swift */,
 				BE476BAE2E4E430E002A4D78 /* ContentView.swift */,
 				BE476BB02E4E430E002A4D78 /* SwiftUIApp.swift */,
@@ -337,7 +346,9 @@
 		6045B8DD249289520091386F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
+				BE476BBB2E4F8D09002A4D78 /* ScoreCalculator.swift in Sources */,
 				BE476B6E2E4BC195002A4D78 /* main.swift in Sources */,
+				BE476BB72E4F79CB002A4D78 /* JobManager.swift in Sources */,
 				BE476BAB2E4D40A0002A4D78 /* PromptTemplates.swift in Sources */,
 				6045B8E6249289520091386F /* AppDelegate.swift in Sources */,
 			);
@@ -354,6 +365,7 @@
 				BE476B9D2E4CF04F002A4D78 /* DesktopAppDelegate.swift in Sources */,
 				BE476BB12E4E430E002A4D78 /* SwiftUIApp.swift in Sources */,
 				BE476BB42E4E430E002A4D78 /* AnalysisManager.swift in Sources */,
+				BE476BB92E4F79DE002A4D78 /* JobManager.swift in Sources */,
 				BE476BB52E4E430E002A4D78 /* ContentView.swift in Sources */,
 				BE476BA52E4CF667002A4D78 /* ResumeManager.swift in Sources */,
 			);

@@ -50,6 +50,24 @@ async function startFourCycleAnalysis(data, sendResponse) {
         // Extract JobID from URL or title for tracking
         const jobId = extractJobId(data);
         console.log("🚀 [BACKGROUND] Starting Single Request 4-Cycle Analysis for Job:", jobId);
+        console.log("📋 [BACKGROUND] Job Details - Title:", data.jobTitle || "Unknown", "Company:", data.company || "Unknown");
+        
+        // Store job metadata in UserDefaults for the native app to access
+        if (data.jobTitle && data.company) {
+            try {
+                await browser.runtime.sendNativeMessage("com.kuangming.WhatYOE", {
+                    message: "storeJobMetadata",
+                    data: {
+                        jobTitle: data.jobTitle,
+                        company: data.company,
+                        pageUrl: data.url || "unknown"
+                    }
+                });
+                console.log("💾 [BACKGROUND] Job metadata stored in UserDefaults");
+            } catch (error) {
+                console.warn("⚠️ [BACKGROUND] Failed to store job metadata:", error);
+            }
+        }
         
         const response = await browser.runtime.sendNativeMessage("com.kuangming.WhatYOE", {
             message: "fourCycleAnalysis",
@@ -63,16 +81,35 @@ async function startFourCycleAnalysis(data, sendResponse) {
             console.log("   📈 Fit Scores (YOE, Education, Skills, Experience):", fitScores);
             console.log("   📉 Gap Scores (YOE, Education, Skills, Experience):", gapScores);
             console.log("   🎯 Final Score:", finalScore);
-            console.log("   🧮 Calculation: (Fit sum: " + (fitScores?.reduce((a,b) => a+b, 0) || 0) + 
-                         " + Gap sum: " + (gapScores?.reduce((a,b) => a+b, 0) || 0) + ") / 8 = " + finalScore);
+            const fitSum = fitScores?.reduce((a,b) => a+b, 0) || 0;
+            const gapSum = gapScores?.reduce((a,b) => a+b, 0) || 0;
+            const totalScores = (fitScores?.length || 0) + (gapScores?.length || 0);
+            const fitMultiplier = 1.2;
+            const gapMultiplier = 0.95;
+            const expectedCalculation = (fitSum * fitMultiplier + gapSum * gapMultiplier) / totalScores;
+            console.log("   🧮 Calculation: (Fit sum: " + fitSum + " × " + fitMultiplier + " + Gap sum: " + gapSum + " × " + gapMultiplier + ") / " + totalScores + " = " + expectedCalculation.toFixed(3) + " (actual: " + finalScore + ")");
         } else {
             console.log("⚠️ [BACKGROUND] No scores found for Job:", jobId);
+            console.log("🔍 [BACKGROUND] Response structure:", response);
+            console.log("🔍 [BACKGROUND] Response keys:", response ? Object.keys(response) : "No response");
+            
+            // Don't fall back to old scores for new jobs - this prevents score contamination
+            console.log("ℹ️ [BACKGROUND] No fallback to old scores - waiting for fresh analysis results");
         }
         
-        sendResponse({
+        // Include scores in the response if available
+        let responseWithScores = {
             success: true,
             result: response
-        });
+        };
+        
+        // If we have scores, include them in the response
+        if (response && response.scores) {
+            responseWithScores.scores = response.scores;
+        }
+        // Removed fallback to old scores - each job should get fresh results
+        
+        sendResponse(responseWithScores);
     } catch (error) {
         console.error("❌ [BACKGROUND] 4-Cycle Analysis failed for Job:", extractJobId(data), "Error:", error);
         sendResponse({
@@ -103,6 +140,23 @@ async function startPhase1(data, sendResponse) {
     try {
         console.log("🚀 [BACKGROUND] Starting Phase 1: YOE Analysis");
         
+        // Store job metadata in UserDefaults for the native app to access
+        if (data.jobTitle && data.company) {
+            try {
+                await browser.runtime.sendNativeMessage("com.kuangming.WhatYOE", {
+                    message: "storeJobMetadata",
+                    data: {
+                        jobTitle: data.jobTitle,
+                        company: data.company,
+                        pageUrl: data.url || "unknown"
+                    }
+                });
+                console.log("💾 [BACKGROUND] Job metadata stored for Phase 1");
+            } catch (error) {
+                console.warn("⚠️ [BACKGROUND] Failed to store job metadata for Phase 1:", error);
+            }
+        }
+        
         const response = await browser.runtime.sendNativeMessage("com.kuangming.WhatYOE", {
             message: "phase1Analysis",
             data: data
@@ -126,6 +180,23 @@ async function startPhase1(data, sendResponse) {
 async function startPhase2(data, sendResponse) {
     try {
         console.log("🚀 [BACKGROUND] Starting Phase 2: Education Analysis");
+        
+        // Store job metadata in UserDefaults for the native app to access
+        if (data.jobTitle && data.company) {
+            try {
+                await browser.runtime.sendNativeMessage("com.kuangming.WhatYOE", {
+                    message: "storeJobMetadata",
+                    data: {
+                        jobTitle: data.jobTitle,
+                        company: data.company,
+                        pageUrl: data.url || "unknown"
+                    }
+                });
+                console.log("💾 [BACKGROUND] Job metadata stored for Phase 2");
+            } catch (error) {
+                console.warn("⚠️ [BACKGROUND] Failed to store job metadata for Phase 2:", error);
+            }
+        }
         
         const response = await browser.runtime.sendNativeMessage("com.kuangming.WhatYOE", {
             message: "phase2Analysis",
@@ -151,6 +222,23 @@ async function startPhase3(data, sendResponse) {
     try {
         console.log("🚀 [BACKGROUND] Starting Phase 3: Skills Analysis");
         
+        // Store job metadata in UserDefaults for the native app to access
+        if (data.jobTitle && data.company) {
+            try {
+                await browser.runtime.sendNativeMessage("com.kuangming.WhatYOE", {
+                    message: "storeJobMetadata",
+                    data: {
+                        jobTitle: data.jobTitle,
+                        company: data.company,
+                        pageUrl: data.url || "unknown"
+                    }
+                });
+                console.log("💾 [BACKGROUND] Job metadata stored for Phase 3");
+            } catch (error) {
+                console.warn("⚠️ [BACKGROUND] Failed to store job metadata for Phase 3:", error);
+            }
+        }
+        
         const response = await browser.runtime.sendNativeMessage("com.kuangming.WhatYOE", {
             message: "phase3Analysis",
             data: data
@@ -174,6 +262,23 @@ async function startPhase3(data, sendResponse) {
 async function startPhase4(data, sendResponse) {
     try {
         console.log("🚀 [BACKGROUND] Starting Phase 4: Experience Analysis");
+        
+        // Store job metadata in UserDefaults for the native app to access
+        if (data.jobTitle && data.company) {
+            try {
+                await browser.runtime.sendNativeMessage("com.kuangming.WhatYOE", {
+                    message: "storeJobMetadata",
+                    data: {
+                        jobTitle: data.jobTitle,
+                        company: data.company,
+                        pageUrl: data.url || "unknown"
+                    }
+                });
+                console.log("💾 [BACKGROUND] Job metadata stored for Phase 4");
+            } catch (error) {
+                console.warn("⚠️ [BACKGROUND] Failed to store job metadata for Phase 4:", error);
+            }
+        }
         
         const response = await browser.runtime.sendNativeMessage("com.kuangming.WhatYOE", {
             message: "phase4Analysis",

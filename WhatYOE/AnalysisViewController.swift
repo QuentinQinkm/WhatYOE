@@ -716,104 +716,11 @@ class LocalAnalysisViewController: NSViewController {
     }
     
     private func combineEvaluationResults(results: [String]) -> String {
-        let yearsResult = results[0]
-        let educationResult = results[1]
-        let skillsResult = results[2]
-        let experienceResult = results[3]
-        
-        let (fitScores, gapScores) = extractScoresFromResults(
-            years: yearsResult,
-            education: educationResult,
-            skills: skillsResult,
-            experience: experienceResult
-        )
-        
-        let totalFitScore = fitScores.reduce(0.0, +)
-        let totalGapScore = gapScores.reduce(0.0, +)
-        let finalScore = (totalFitScore + totalGapScore) / 8.0
-        
-        return """
-        # EVALUATION RESULTS
-        
-        ## 1. YEARS OF EXPERIENCE
-        \(yearsResult)
-        
-        ## 2. EDUCATION
-        \(educationResult)
-        
-        ## 3. TECHNICAL SKILLS
-        \(skillsResult)
-        
-        ## 4. RELEVANT EXPERIENCE
-        \(experienceResult)
-        
-        ## FINAL SCORE
-        **Total Fit Score:** \(String(format: "%.1f", totalFitScore)) / 12
-        **Total Gap Score:** \(String(format: "%.1f", totalGapScore)) / 12
-        **Final Score:** \(String(format: "%.1f", finalScore)) (0-3 scale)
-        
-        ## RECOMMENDATION
-        \(getRecommendation(finalScore: finalScore))
-        """
+        let (formattedOutput, _, _, _) = ScoreCalculator.processEvaluationResults(results: results)
+        return formattedOutput
     }
     
-    private func extractScoresFromResults(years: String, education: String, skills: String, experience: String) -> (fitScores: [Double], gapScores: [Double]) {
-        let results = [years, education, skills, experience]
-        var fitScores: [Double] = []
-        var gapScores: [Double] = []
-        
-        for result in results {
-            fitScores.append(extractScore(from: result, type: "Fit Score"))
-            gapScores.append(extractScore(from: result, type: "Gap Score"))
-        }
-        
-        return (fitScores, gapScores)
-    }
-    
-    private func extractScore(from text: String, type: String) -> Double {
-        let patterns = [
-            "\\*\\*\(type):\\*\\*\\s*([0-9]+(?:\\.\\d+)?)",
-            "\\*\\*\(type.lowercased()):\\*\\*\\s*([0-9]+(?:\\.\\d+)?)",
-            "\(type):\\s*([0-9]+(?:\\.\\d+)?)",
-            "\(type.lowercased()):\\s*([0-9]+(?:\\.\\d+)?)"
-        ]
-        
-        for pattern in patterns {
-            do {
-                let regex = try NSRegularExpression(pattern: pattern, options: .caseInsensitive)
-                let range = NSRange(location: 0, length: text.utf16.count)
-                
-                if let match = regex.firstMatch(in: text, range: range) {
-                    let scoreRange = match.range(at: 1)
-                    if let range = Range(scoreRange, in: text) {
-                        let scoreString = String(text[range])
-                        if let score = Double(scoreString) {
-                            return score
-                        }
-                    }
-                }
-            } catch {
-                continue
-            }
-        }
-        
-        return 0.0
-    }
-    
-    private func getRecommendation(finalScore: Double) -> String {
-        switch finalScore {
-        case 0.0..<1.0:
-            return "❌ Poor Match - Candidate does not meet minimum requirements"
-        case 1.0..<2.0:
-            return "⚠️ Weak Match - Candidate has some gaps but may be considered"
-        case 2.0..<2.5:
-            return "✅ Good Match - Candidate meets most requirements"
-        case 2.5...3.0:
-            return "🎯 Excellent Match - Candidate is highly qualified"
-        default:
-            return "❓ Unknown - Score out of expected range"
-        }
-    }
+    // Score calculation and extraction now handled by ScoreCalculator
 }
 
 extension LocalAnalysisViewController: NSTextViewDelegate {

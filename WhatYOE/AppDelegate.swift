@@ -106,6 +106,9 @@ struct SafariAnalysisRequest: Codable {
     let id: String
     let resumeText: String
     let jobDescription: String
+    let jobTitle: String?      // Job title extracted from page
+    let company: String?       // Company name extracted from page
+    let pageUrl: String?       // URL of the job posting
     let timestamp: Date
 }
 
@@ -114,12 +117,20 @@ struct SafariAnalysisResponse: Codable {
     let results: String?
     let error: String?
     let timestamp: Date
+    let scores: AnalysisScores?
+}
+
+struct AnalysisScores: Codable {
+    let fitScores: [Double]
+    let gapScores: [Double]
+    let finalScore: Double
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Properties
     private var statusItem: NSStatusItem?
+    private var isAnalysisStopped = false
     
     override init() {
         super.init()
@@ -518,104 +529,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func combineEvaluationResults(results: [String]) -> String {
-        let yearsResult = results[0]
-        let educationResult = results[1]
-        let skillsResult = results[2]
-        let experienceResult = results[3]
-        
-        let (fitScores, gapScores) = extractScoresFromResults(
-            years: yearsResult,
-            education: educationResult,
-            skills: skillsResult,
-            experience: experienceResult
-        )
-        
-        let totalFitScore = fitScores.reduce(0.0, +)
-        let totalGapScore = gapScores.reduce(0.0, +)
-        let finalScore = (totalFitScore + totalGapScore) / 8.0
-        
-        return """
-        # EVALUATION RESULTS
-        
-        ## 1. YEARS OF EXPERIENCE
-        \(yearsResult)
-        
-        ## 2. EDUCATION
-        \(educationResult)
-        
-        ## 3. TECHNICAL SKILLS
-        \(skillsResult)
-        
-        ## 4. RELEVANT EXPERIENCE
-        \(experienceResult)
-        
-        ## FINAL SCORE
-        **Total Fit Score:** \(String(format: "%.1f", totalFitScore)) / 12
-        **Total Gap Score:** \(String(format: "%.1f", totalGapScore)) / 12
-        **Final Score:** \(String(format: "%.1f", finalScore)) (0-3 scale)
-        
-        ## RECOMMENDATION
-        \(getRecommendation(finalScore: finalScore))
-        """
+        let (formattedOutput, _, _, _) = ScoreCalculator.processEvaluationResults(results: results)
+        return formattedOutput
     }
     
-    private func extractScoresFromResults(years: String, education: String, skills: String, experience: String) -> (fitScores: [Double], gapScores: [Double]) {
-        let results = [years, education, skills, experience]
-        var fitScores: [Double] = []
-        var gapScores: [Double] = []
-        
-        for result in results {
-            fitScores.append(extractScore(from: result, type: "Fit Score"))
-            gapScores.append(extractScore(from: result, type: "Gap Score"))
-        }
-        
-        return (fitScores, gapScores)
-    }
-    
-    private func extractScore(from text: String, type: String) -> Double {
-        let patterns = [
-            "\\*\\*\(type):\\*\\*\\s*([0-9]+(?:\\.\\d+)?)",
-            "\\*\\*\(type.lowercased()):\\*\\*\\s*([0-9]+(?:\\.\\d+)?)",
-            "\(type):\\s*([0-9]+(?:\\.\\d+)?)",
-            "\(type.lowercased()):\\s*([0-9]+(?:\\.\\d+)?)"
-        ]
-        
-        for pattern in patterns {
-            do {
-                let regex = try NSRegularExpression(pattern: pattern, options: .caseInsensitive)
-                let range = NSRange(location: 0, length: text.utf16.count)
-                
-                if let match = regex.firstMatch(in: text, range: range) {
-                    let scoreRange = match.range(at: 1)
-                    if let range = Range(scoreRange, in: text) {
-                        let scoreString = String(text[range])
-                        if let score = Double(scoreString) {
-                            return score
-                        }
-                    }
-                }
-            } catch {
-                continue
-            }
-        }
-        
-        return 0.0
-    }
-    
-    private func getRecommendation(finalScore: Double) -> String {
-        switch finalScore {
-        case 0.0..<1.0:
-            return "❌ Poor Match - Candidate does not meet minimum requirements"
-        case 1.0..<2.0:
-            return "⚠️ Weak Match - Candidate has some gaps but may be considered"
-        case 2.0..<2.5:
-            return "✅ Good Match - Candidate meets most requirements"
-        case 2.5...3.0:
-            return "🎯 Excellent Match - Candidate is highly qualified"
-        default:
-            return "❓ Unknown - Score out of expected range"
-        }
-    }
+    // Score calculation and extraction now handled by ScoreCalculator
     
     // MARK: - Safari Analysis Monitoring
     
@@ -635,43 +553,104 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             await monitorResumeCleaningRequests()
         }
         
+        // Start a background task to monitor for stop/resume commands
+        Task {
+            await monitorStopResumeCommands()
+        }
+        
         print("🌐 Safari analysis monitoring started")
         print("🖥️ Desktop analysis monitoring started")
         print("🧹 Resume cleaning monitoring started")
+        print("🛑 Stop/resume command monitoring started")
     }
     
     private func monitorSafariAnalysisRequests() async {
         let sharedDefaults = UserDefaults(suiteName: "group.com.kuangming.WhatYOE.shared") ?? UserDefaults.standard
+        var lastStopMessageTime: Date? = nil
         
         while true {
+            // Check if analysis has been stopped globally
+            if isAnalysisStopped {
+                // Only log the stop message once, not repeatedly
+                if lastStopMessageTime == nil {
+                    print("🛑 Safari analysis monitoring stopped globally")
+                    lastStopMessageTime = Date()
+                }
+                
+                // Wait longer when stopped to reduce log spam
+                try? await Task.sleep(nanoseconds: 10_000_000_000) // 10 seconds
+                continue
+            }
+            
+            // Check if analysis has been stopped via UserDefaults
+            let status = sharedDefaults.string(forKey: "safariAnalysisStatus")
+            if status == "stopped" {
+                // Only log the stop message once, not repeatedly
+                if lastStopMessageTime == nil {
+                    print("🛑 Safari analysis monitoring stopped by user request")
+                    lastStopMessageTime = Date()
+                }
+                
+                // Wait longer when stopped to reduce log spam
+                try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
+                continue
+            }
+            
+            // Reset stop message time when resuming
+            if lastStopMessageTime != nil {
+                print("▶️ Safari analysis monitoring resumed")
+                lastStopMessageTime = nil
+            }
+            
             // Check for pending Safari analysis requests
             if let requestData = sharedDefaults.data(forKey: "safariAnalysisRequest"),
                let request = try? JSONDecoder().decode(SafariAnalysisRequest.self, from: requestData),
-               sharedDefaults.string(forKey: "safariAnalysisStatus") == "pending" {
+               status == "pending" {
                 
                 print("🌐 Processing Safari analysis request: \(request.id)")
                 await processSafariAnalysisRequest(request)
             }
             
-            // Check every 500ms
+            // Check every 500ms when active
             try? await Task.sleep(nanoseconds: 500_000_000)
         }
     }
     
     private func monitorDesktopAnalysisRequests() async {
         let sharedDefaults = UserDefaults(suiteName: "group.com.kuangming.WhatYOE.shared") ?? UserDefaults.standard
+        var lastStopMessageTime: Date? = nil
         
         while true {
+            // Check if analysis has been stopped
+            let status = sharedDefaults.string(forKey: "analysisStatus")
+            if status == "stopped" {
+                // Only log the stop message once, not repeatedly
+                if lastStopMessageTime == nil {
+                    print("🛑 Desktop analysis monitoring stopped by user request")
+                    lastStopMessageTime = Date()
+                }
+                
+                // Wait longer when stopped to reduce log spam
+                try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
+                continue
+                }
+            
+            // Reset stop message time when resuming
+            if lastStopMessageTime != nil {
+                print("▶️ Desktop analysis monitoring resumed")
+                lastStopMessageTime = nil
+            }
+            
             // Check for pending desktop analysis requests
             if let requestData = sharedDefaults.data(forKey: "analysisRequest"),
                let request = try? JSONDecoder().decode(AnalysisRequest.self, from: requestData),
-               sharedDefaults.string(forKey: "analysisStatus") == "pending" {
+               status == "pending" {
                 
                 print("🖥️ Processing desktop analysis request: \(request.id)")
                 await processDesktopAnalysisRequest(request)
             }
             
-            // Check every 500ms
+            // Check every 500ms when active
             try? await Task.sleep(nanoseconds: 500_000_000)
         }
     }
@@ -682,6 +661,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         print("🧹 Resume cleaning monitoring started - checking every 500ms")
         
         while true {
+            // Check if analysis has been stopped globally
+            if isAnalysisStopped {
+                try? await Task.sleep(nanoseconds: 10_000_000_000) // 10 seconds
+                continue
+            }
+            
             // Check for pending resume cleaning requests
             if let requestData = sharedDefaults.data(forKey: "resumeCleaningRequest"),
                let request = try? JSONDecoder().decode(ResumeCleaningRequest.self, from: requestData),
@@ -693,6 +678,55 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             
             // Check every 500ms
             try? await Task.sleep(nanoseconds: 500_000_000)
+        }
+    }
+    
+    // MARK: - Stop/Resume Control
+    
+    private func handleStopAnalysis() {
+        isAnalysisStopped = true
+        let sharedDefaults = UserDefaults(suiteName: "group.com.kuangming.WhatYOE.shared") ?? UserDefaults.standard
+        
+        // Set status to stopped
+        sharedDefaults.set("stopped", forKey: "safariAnalysisStatus")
+        sharedDefaults.set("stopped", forKey: "analysisStatus")
+        
+        // Clear any pending requests
+        sharedDefaults.removeObject(forKey: "safariAnalysisRequest")
+        sharedDefaults.removeObject(forKey: "analysisRequest")
+        
+        print("🛑 Analysis stopped globally - all monitoring halted")
+    }
+    
+    private func handleResumeAnalysis() {
+        isAnalysisStopped = false
+        let sharedDefaults = UserDefaults(suiteName: "group.com.kuangming.WhatYOE.shared") ?? UserDefaults.standard
+        
+        // Reset status to allow processing
+        sharedDefaults.set("pending", forKey: "safariAnalysisStatus")
+        sharedDefaults.set("pending", forKey: "analysisStatus")
+        
+        print("▶️ Analysis resumed globally - all monitoring active")
+    }
+    
+    private func monitorStopResumeCommands() async {
+        let sharedDefaults = UserDefaults(suiteName: "group.com.kuangming.WhatYOE.shared") ?? UserDefaults.standard
+        
+        while true {
+            // Check for stop command
+            if sharedDefaults.string(forKey: "stopAnalysisCommand") == "stop" {
+                handleStopAnalysis()
+                sharedDefaults.removeObject(forKey: "stopAnalysisCommand")
+            }
+            
+            // Check for resume command
+            if sharedDefaults.string(forKey: "resumeAnalysisCommand") == "resume" {
+                handleResumeAnalysis()
+                sharedDefaults.removeObject(forKey: "resumeAnalysisCommand")
+            }
+            
+            // Check every 1 second
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
         }
     }
     
@@ -726,12 +760,51 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 results = combineEvaluationResults(results: phaseResults)
             }
             
+            // Save the job analysis result
+            let activeResumeId = ResumeManager.shared.getActiveResumeId() ?? "unknown"
+            let jobTitle = request.jobTitle ?? "Unknown Position"
+            let company = request.company ?? "Unknown Company"
+            
+            let savedJob = JobManager.shared.createJobFromSafariAnalysis(
+                jobTitle: jobTitle,
+                company: company,
+                cleanedJobDescription: cleanedJob,
+                analysisResult: results,
+                resumeId: activeResumeId
+            )
+            
+            print("💼 Job saved with ID: \(savedJob.jobId)")
+            
+            // Prepare scores for response
+            let fitScores = [
+                savedJob.analysisScores.yearsOfExperienceFit,
+                savedJob.analysisScores.educationFit,
+                savedJob.analysisScores.technicalSkillsFit,
+                savedJob.analysisScores.relevantExperienceFit
+            ].filter { $0 > 0.0 } // Only include valid scores
+            
+            let gapScores = [
+                savedJob.analysisScores.yearsOfExperienceGap,
+                savedJob.analysisScores.educationGap,
+                savedJob.analysisScores.technicalSkillsGap,
+                savedJob.analysisScores.relevantExperienceGap
+            ].filter { $0 > 0.0 } // Only include valid scores
+            
+            print("🔢 Final scores for Safari - Fit: \(fitScores), Gap: \(gapScores), Final: \(savedJob.analysisScores.finalScore)")
+            
+            let analysisScores = AnalysisScores(
+                fitScores: fitScores,
+                gapScores: gapScores,
+                finalScore: savedJob.analysisScores.finalScore
+            )
+            
             // Send response back to Safari extension
             let response = SafariAnalysisResponse(
                 requestId: request.id,
                 results: results,
                 error: nil,
-                timestamp: Date()
+                timestamp: Date(),
+                scores: analysisScores
             )
             
             if let responseData = try? JSONEncoder().encode(response) {
@@ -748,7 +821,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 requestId: request.id,
                 results: nil,
                 error: error.localizedDescription,
-                timestamp: Date()
+                timestamp: Date(),
+                scores: nil
             )
             
             if let responseData = try? JSONEncoder().encode(response) {
