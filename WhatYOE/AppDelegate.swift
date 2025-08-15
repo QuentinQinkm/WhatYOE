@@ -418,16 +418,64 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             PromptTemplates.relevantExperienceEvaluationPrompt
         ]
         
-        var results: [String] = []
+        print("🚀 Starting concurrent 4-round evaluation...")
+        let startTime = Date()
         
-        for prompt in prompts {
-            let session = LanguageModelSession(instructions: prompt)
-            let fullPrompt = prompt + "\n\nResume:\n\(resumeText)\n\nJob Description:\n\(jobDescription)"
-            let response = try await session.respond(to: fullPrompt)
-            results.append(response.content)
-        }
+        // Create concurrent tasks for all 4 evaluations
+        async let yearsTask = evaluateWithPrompt(
+            prompt: prompts[0],
+            resumeText: resumeText,
+            jobDescription: jobDescription,
+            name: "Years of Experience"
+        )
+        
+        async let educationTask = evaluateWithPrompt(
+            prompt: prompts[1],
+            resumeText: resumeText,
+            jobDescription: jobDescription,
+            name: "Education"
+        )
+        
+        async let skillsTask = evaluateWithPrompt(
+            prompt: prompts[2],
+            resumeText: resumeText,
+            jobDescription: jobDescription,
+            name: "Technical Skills"
+        )
+        
+        async let experienceTask = evaluateWithPrompt(
+            prompt: prompts[3],
+            resumeText: resumeText,
+            jobDescription: jobDescription,
+            name: "Relevant Experience"
+        )
+        
+        // Wait for all tasks to complete concurrently
+        let results = try await [
+            yearsTask,
+            educationTask,
+            skillsTask,
+            experienceTask
+        ]
+        
+        let duration = Date().timeIntervalSince(startTime)
+        print("✅ Concurrent 4-round evaluation completed in \(String(format: "%.1f", duration)) seconds")
         
         return results
+    }
+    
+    // Helper function for individual evaluation tasks
+    private func evaluateWithPrompt(prompt: String, resumeText: String, jobDescription: String, name: String) async throws -> String {
+        let startTime = Date()
+        print("🔄 Starting \(name) evaluation at \(startTime)...")
+        
+        let session = LanguageModelSession(instructions: prompt)
+        let userQuery = "Resume:\n\(resumeText)\n\nJob Description:\n\(jobDescription)"
+        let response = try await session.respond(to: userQuery)
+        
+        let duration = Date().timeIntervalSince(startTime)
+        print("✅ Completed \(name) evaluation in \(String(format: "%.2f", duration))s")
+        return response.content
     }
     
     private func performComprehensiveEvaluation(resumeText: String, jobDescription: String) async throws -> String {
@@ -718,39 +766,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let analysisMethod = sharedDefaults.string(forKey: "analysisMethod") ?? "fourRun"
             
             print("🖥️ Processing desktop analysis request using \(analysisMethod) method")
-            print("🖥️ Resume text length: \(request.resumeText.count) characters")
-            print("🖥️ Job description length: \(request.jobDescription.count) characters")
             
             let cleanedJob = try await cleanJobDescriptionWithAI(request.jobDescription)
-            print("🖥️ Cleaned job description length: \(cleanedJob.count) characters")
             
             let results: String
             
             if analysisMethod == "singleRun" {
                 // Use comprehensive single-run analysis
                 print("🚀 Using comprehensive single-run analysis")
-                
-                // Create the full prompt to check size
-                let fullPrompt = PromptTemplates.createComprehensiveEvaluationPrompt(
-                    cleanedResume: request.resumeText,
-                    cleanedJob: cleanedJob
-                )
-                print("🚀 Full prompt length: \(fullPrompt.count) characters")
-                print("🚀 Full prompt preview: \(String(fullPrompt.prefix(200)))...")
-                
-                // Estimate token count (rough approximation: 1 token ≈ 4 characters)
-                let estimatedTokens = fullPrompt.count / 4
-                print("🚀 Estimated tokens: ~\(estimatedTokens) (characters ÷ 4)")
-                print("🚀 Token limit: 4,096")
-                print("🚀 Token usage: \(estimatedTokens)/4,096 (\(Int((Double(estimatedTokens) / 4096.0) * 100))%)")
-                
-                if estimatedTokens > 4000 {
-                    print("⚠️ WARNING: Estimated tokens exceed 4,000 - may hit limit!")
-                } else if estimatedTokens > 3500 {
-                    print("⚠️ WARNING: Estimated tokens above 3,500 - approaching limit!")
-                } else {
-                    print("✅ Estimated tokens well within limit")
-                }
                 
                 results = try await performComprehensiveEvaluation(
                     resumeText: request.resumeText,
@@ -759,13 +782,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             } else {
                 // Use traditional 4-run analysis
                 print("🔄 Using traditional 4-run analysis")
-                
-                // Log token usage for 4-round method
-                let totalInputLength = request.resumeText.count + cleanedJob.count
-                let estimatedTotalTokens = totalInputLength / 4
-                print("🔄 Total input length: \(totalInputLength) characters")
-                print("🔄 Estimated total tokens: ~\(estimatedTotalTokens) (characters ÷ 4)")
-                print("🔄 Note: 4-round method uses shorter prompts per call")
                 
                 let phaseResults = try await performFourRoundEvaluation(
                     resumeText: request.resumeText,

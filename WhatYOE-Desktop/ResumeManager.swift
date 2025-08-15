@@ -13,7 +13,7 @@ import AppKit
 // Import shared data structures
 // (These should be defined in this file or included properly in the target)
 
-struct ResumeItem {
+struct ResumeItem: Identifiable {
     let id: String
     let name: String
     let cleanedText: String
@@ -24,6 +24,13 @@ struct ResumeItem {
         self.name = name
         self.cleanedText = cleanedText
         self.dateCreated = Date()
+    }
+    
+    init(id: String, name: String, cleanedText: String, dateCreated: Date) {
+        self.id = id
+        self.name = name
+        self.cleanedText = cleanedText
+        self.dateCreated = dateCreated
     }
     
     var isActive: Bool {
@@ -79,6 +86,25 @@ class ResumeManager {
         
         if let data = try? JSONEncoder().encode(resumes) {
             userDefaults.set(data, forKey: resumesKey)
+        }
+    }
+    
+    func updateResume(_ updatedResume: ResumeItem) {
+        var resumes = getAllResumes()
+        
+        // Find and replace the resume with the same ID
+        if let index = resumes.firstIndex(where: { $0.id == updatedResume.id }) {
+            resumes[index] = updatedResume
+            
+            // Save to UserDefaults
+            if let data = try? JSONEncoder().encode(resumes) {
+                userDefaults.set(data, forKey: resumesKey)
+            }
+            
+            // Update active resume data if this is the active resume
+            if getActiveResumeId() == updatedResume.id {
+                userDefaults.set(updatedResume.cleanedText, forKey: "cleanedResumeData")
+            }
         }
     }
     

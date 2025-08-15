@@ -50,28 +50,7 @@ class DesktopAppDelegate: NSObject, NSApplicationDelegate {
     
     @MainActor
     private func createAndShowAnalysisWindow() {
-        print("🔧 Creating desktop analysis window")
-        
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
-            backing: .buffered,
-            defer: false
-        )
-        
-        window.title = "WhatYOE - Desktop Analysis Interface"
-        window.center()
-        
-        // Create the analysis view controller
-        let viewController = DesktopAnalysisViewController()
-        window.contentViewController = viewController
-        
-        analysisWindow = window
-        
-        // Show the window
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-        
-        print("✅ Desktop analysis window created and shown")
+        // SwiftUI app will handle window creation automatically
+        print("✅ SwiftUI Desktop app launched")
     }
 }

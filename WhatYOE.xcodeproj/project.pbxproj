@@ -16,17 +16,17 @@
 		6045B901249289530091386F /* images in Resources */ = {isa = PBXBuildFile; fileRef = 6045B900249289530091386F /* images */; };
 		6045B903249289530091386F /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 6045B902249289530091386F /* manifest.json */; };
 		6045B905249289530091386F /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = 6045B904249289530091386F /* background.js */; };
-		BE476B6C2E4BC195002A4D78 /* AnalysisViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B692E4BC195002A4D78 /* AnalysisViewController.swift */; };
 		BE476B6D2E4BC471002A4D78 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE9CE85A2E4A892F00C8C5D2 /* PDFKit.framework */; };
 		BE476B6E2E4BC195002A4D78 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B6F2E4BC195002A4D78 /* main.swift */; };
 		BE476B9A2E4CF04F002A4D78 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = BE476B932E4CF04F002A4D78 /* Info.plist */; };
 		BE476B9B2E4CF04F002A4D78 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BE476B8F2E4CF04F002A4D78 /* Assets.xcassets */; };
-		BE476B9C2E4CF04F002A4D78 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B942E4CF04F002A4D78 /* main.swift */; };
 		BE476B9D2E4CF04F002A4D78 /* DesktopAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B922E4CF04F002A4D78 /* DesktopAppDelegate.swift */; };
-		BE476BA02E4CF04F002A4D78 /* DesktopAnalysisViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B912E4CF04F002A4D78 /* DesktopAnalysisViewController.swift */; };
 		BE476BA52E4CF667002A4D78 /* ResumeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B962E4CF04F002A4D78 /* ResumeManager.swift */; };
 		BE476BA72E4CF6EA002A4D78 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE9CE85A2E4A892F00C8C5D2 /* PDFKit.framework */; };
 		BE476BAB2E4D40A0002A4D78 /* PromptTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BA82E4D40A0002A4D78 /* PromptTemplates.swift */; };
+		BE476BB12E4E430E002A4D78 /* SwiftUIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BB02E4E430E002A4D78 /* SwiftUIApp.swift */; };
+		BE476BB42E4E430E002A4D78 /* AnalysisManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BAD2E4E430E002A4D78 /* AnalysisManager.swift */; };
+		BE476BB52E4E430E002A4D78 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BAE2E4E430E002A4D78 /* ContentView.swift */; };
 		BE9C41AA2E43EA9700073E0D /* FoundationModels.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE9C41A92E43EA9700073E0D /* FoundationModels.framework */; };
 		BE9C41B42E44029700073E0D /* popup.html in Resources */ = {isa = PBXBuildFile; fileRef = BE9C41B22E44029700073E0D /* popup.html */; };
 		BE9C41B52E44029700073E0D /* content.js in Resources */ = {isa = PBXBuildFile; fileRef = BE9C41B12E44029700073E0D /* content.js */; };
@@ -71,19 +71,18 @@
 		6045B904249289530091386F /* background.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = background.js; sourceTree = "<group>"; };
 		6045B90E249289530091386F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		6045B90F249289530091386F /* Native_Messaging_Demo_Extension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Native_Messaging_Demo_Extension.entitlements; sourceTree = "<group>"; };
-		BE476B692E4BC195002A4D78 /* AnalysisViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisViewController.swift; sourceTree = "<group>"; };
 		BE476B6F2E4BC195002A4D78 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		BE476B792E4CEDD6002A4D78 /* WhatYOE-Desktop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "WhatYOE-Desktop.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BE476B8F2E4CF04F002A4D78 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		BE476B912E4CF04F002A4D78 /* DesktopAnalysisViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopAnalysisViewController.swift; sourceTree = "<group>"; };
 		BE476B922E4CF04F002A4D78 /* DesktopAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopAppDelegate.swift; sourceTree = "<group>"; };
 		BE476B932E4CF04F002A4D78 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		BE476B942E4CF04F002A4D78 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
-		BE476B952E4CF04F002A4D78 /* PromptTemplates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptTemplates.swift; sourceTree = "<group>"; };
 		BE476B962E4CF04F002A4D78 /* ResumeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResumeManager.swift; sourceTree = "<group>"; };
 		BE476B982E4CF04F002A4D78 /* WhatYOE-Desktop.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "WhatYOE-Desktop.entitlements"; sourceTree = "<group>"; };
 		BE476BA82E4D40A0002A4D78 /* PromptTemplates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptTemplates.swift; sourceTree = "<group>"; };
 		BE476BA92E4D40A0002A4D78 /* ResumeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResumeManager.swift; sourceTree = "<group>"; };
+		BE476BAD2E4E430E002A4D78 /* AnalysisManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisManager.swift; sourceTree = "<group>"; };
+		BE476BAE2E4E430E002A4D78 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		BE476BB02E4E430E002A4D78 /* SwiftUIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftUIApp.swift; sourceTree = "<group>"; };
 		BE9C41A92E43EA9700073E0D /* FoundationModels.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FoundationModels.framework; path = System/Library/Frameworks/FoundationModels.framework; sourceTree = SDKROOT; };
 		BE9C41B12E44029700073E0D /* content.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = content.js; sourceTree = "<group>"; };
 		BE9C41B22E44029700073E0D /* popup.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = popup.html; sourceTree = "<group>"; };
@@ -151,7 +150,6 @@
 				BE476BA82E4D40A0002A4D78 /* PromptTemplates.swift */,
 				BE476BA92E4D40A0002A4D78 /* ResumeManager.swift */,
 				BE476B6F2E4BC195002A4D78 /* main.swift */,
-				BE476B692E4BC195002A4D78 /* AnalysisViewController.swift */,
 				6045B8E4249289520091386F /* Native_Messaging_Demo.entitlements */,
 				6045B8E5249289520091386F /* AppDelegate.swift */,
 				6045B8EC249289530091386F /* Assets.xcassets */,
@@ -198,12 +196,12 @@
 		BE476B992E4CF04F002A4D78 /* WhatYOE-Desktop */ = {
 			isa = PBXGroup;
 			children = (
+				BE476BAD2E4E430E002A4D78 /* AnalysisManager.swift */,
+				BE476BAE2E4E430E002A4D78 /* ContentView.swift */,
+				BE476BB02E4E430E002A4D78 /* SwiftUIApp.swift */,
 				BE476B8F2E4CF04F002A4D78 /* Assets.xcassets */,
-				BE476B912E4CF04F002A4D78 /* DesktopAnalysisViewController.swift */,
 				BE476B922E4CF04F002A4D78 /* DesktopAppDelegate.swift */,
 				BE476B932E4CF04F002A4D78 /* Info.plist */,
-				BE476B942E4CF04F002A4D78 /* main.swift */,
-				BE476B952E4CF04F002A4D78 /* PromptTemplates.swift */,
 				BE476B962E4CF04F002A4D78 /* ResumeManager.swift */,
 				BE476B982E4CF04F002A4D78 /* WhatYOE-Desktop.entitlements */,
 			);
@@ -341,7 +339,6 @@
 			files = (
 				BE476B6E2E4BC195002A4D78 /* main.swift in Sources */,
 				BE476BAB2E4D40A0002A4D78 /* PromptTemplates.swift in Sources */,
-				BE476B6C2E4BC195002A4D78 /* AnalysisViewController.swift in Sources */,
 				6045B8E6249289520091386F /* AppDelegate.swift in Sources */,
 			);
 		};
@@ -354,10 +351,11 @@
 		BE476B752E4CEDD6002A4D78 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
-				BE476B9C2E4CF04F002A4D78 /* main.swift in Sources */,
 				BE476B9D2E4CF04F002A4D78 /* DesktopAppDelegate.swift in Sources */,
+				BE476BB12E4E430E002A4D78 /* SwiftUIApp.swift in Sources */,
+				BE476BB42E4E430E002A4D78 /* AnalysisManager.swift in Sources */,
+				BE476BB52E4E430E002A4D78 /* ContentView.swift in Sources */,
 				BE476BA52E4CF667002A4D78 /* ResumeManager.swift in Sources */,
-				BE476BA02E4CF04F002A4D78 /* DesktopAnalysisViewController.swift in Sources */,
 			);
 		};
 /* End PBXSourcesBuildPhase section */
