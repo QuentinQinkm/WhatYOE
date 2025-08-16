@@ -148,23 +148,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         print("🚀 WhatYOE Background Service starting...")
         
-        // Check for resume cleaning request
-        if CommandLine.arguments.contains("--resume-cleaning") {
-            print("🧹 Resume cleaning request detected")
-            handleResumeCleaningRequest()
-        } else if CommandLine.arguments.contains("--job-analysis") {
-            print("🔍 Job analysis request detected")
-            handleJobAnalysisRequest()
-        } else {
-            // Set up status bar immediately
-            setupStatusBar()
-            requestNotificationPermissions()
-            
-            print("✅ Background service setup complete")
-        }
-        
-        // Always start monitoring for requests regardless of startup mode
+        // Always set up status bar and start monitoring
+        setupStatusBar()
+        requestNotificationPermissions()
         startSafariAnalysisMonitoring()
+        
+        print("✅ Background service setup complete")
     }
     
     func applicationWillTerminate(_ aNotification: Notification) {
@@ -259,15 +248,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Resume Cleaning Server
     
-    private func handleResumeCleaningRequest() {
-        // Set up as background service for cleaning
-        setupStatusBar()
-        
-        Task {
-            await processResumeCleaningRequest()
-        }
-    }
-    
     private func processResumeCleaningRequest() async {
         let sharedDefaults = UserDefaults(suiteName: "group.com.kuangming.WhatYOE.shared") ?? UserDefaults.standard
         
@@ -342,15 +322,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     // MARK: - Job Analysis Server
-    
-    private func handleJobAnalysisRequest() {
-        // Set up as background service for analysis
-        setupStatusBar()
-        
-        Task {
-            await processJobAnalysisRequest()
-        }
-    }
     
     private func processJobAnalysisRequest() async {
         let sharedDefaults = UserDefaults(suiteName: "group.com.kuangming.WhatYOE.shared") ?? UserDefaults.standard
@@ -899,23 +870,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Helper Methods
     
     private func getDesktopAppURL() -> URL? {
-        // Look for desktop app in the same bundle directory
-        let currentAppURL = Bundle.main.bundleURL
         let desktopAppName = "WhatYOE-Desktop.app"
-        let desktopAppURL = currentAppURL.deletingLastPathComponent().appendingPathComponent(desktopAppName)
         
-        // Check if desktop app exists
-        if FileManager.default.fileExists(atPath: desktopAppURL.path) {
-            return desktopAppURL
+        // Search locations in priority order
+        let searchPaths = [
+            // 1. Same bundle directory (for production builds)
+            Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent(desktopAppName),
+            
+            // 2. Xcode DerivedData (for development builds)
+            URL(fileURLWithPath: "/Users/kuangmingqin/Library/Developer/Xcode/DerivedData/WhatYOE-bcfbmdhcazdaqphjlkdutbkjazjw/Build/Products/Debug/\(desktopAppName)"),
+            
+            // 3. Applications folder
+            FileManager.default.urls(for: .applicationDirectory, in: .localDomainMask).first?.appendingPathComponent(desktopAppName)
+        ].compactMap { $0 }
+        
+        // Return the first existing app
+        for url in searchPaths {
+            if FileManager.default.fileExists(atPath: url.path) {
+                print("🔍 Found desktop app at: \(url.path)")
+                return url
+            }
         }
         
-        // Fallback: try to find in Applications folder
-        let applicationsURL = FileManager.default.urls(for: .applicationDirectory, in: .localDomainMask).first
-        if let appsURL = applicationsURL {
-            let fallbackURL = appsURL.appendingPathComponent(desktopAppName)
-            if FileManager.default.fileExists(atPath: fallbackURL.path) {
-                return fallbackURL
-            }
+        print("❌ Desktop app not found in any of these locations:")
+        for url in searchPaths {
+            print("   - \(url.path)")
         }
         
         return nil

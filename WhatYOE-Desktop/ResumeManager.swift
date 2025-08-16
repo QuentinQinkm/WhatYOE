@@ -221,14 +221,13 @@ class ResumeManager {
         }
         
         let config = NSWorkspace.OpenConfiguration()
-        config.arguments = ["--resume-cleaning"]
         
         try await NSWorkspace.shared.openApplication(at: appURL, configuration: config)
-        os_log(.info, "Launched WhatYOE main app for resume cleaning")
+        os_log(.info, "Launched WhatYOE main app - monitoring will pick up the request")
     }
     
     private func waitForCleaningResponse(requestId: String) async throws -> String {
-        let maxWaitTime: TimeInterval = 30.0 // 30 seconds timeout
+        let maxWaitTime: TimeInterval = 60.0 // 60 seconds timeout
         let checkInterval: TimeInterval = 0.5 // Check every 500ms
         let startTime = Date()
         
