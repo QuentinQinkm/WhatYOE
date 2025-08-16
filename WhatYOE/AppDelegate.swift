@@ -777,13 +777,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let activeResumeId = ResumeManager.shared.getActiveResumeId() ?? "unknown"
             let jobTitle = request.jobTitle ?? "Unknown Position"
             let company = request.company ?? "Unknown Company"
+            let linkedinJobId = sharedDefaults.string(forKey: "currentLinkedInJobId") ?? "unknown"
             
             let savedJob = JobManager.shared.createJobFromSafariAnalysis(
                 jobTitle: jobTitle,
                 company: company,
                 cleanedJobDescription: cleanedJob,
                 analysisResult: results,
-                resumeId: activeResumeId
+                resumeId: activeResumeId,
+                linkedinJobId: linkedinJobId
             )
             
             print("💼 Job saved with ID: \(savedJob.jobId)")

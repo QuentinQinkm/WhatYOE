@@ -193,8 +193,9 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
                 // Extract job metadata from LinkedIn page
                 const jobTitle = this.extractJobTitle();
                 const company = this.extractCompany();
+                const linkedinJobId = this.getCardId(card); // Extract LinkedIn job ID
                 
-                console.log(`📋 [YOE AI] Extracted - Title: "${jobTitle}", Company: "${company}"`);
+                console.log(`📋 [YOE AI] Extracted - Title: "${jobTitle}", Company: "${company}", Job ID: "${linkedinJobId}"`);
                 
                 // Single request for 4-cycle analysis
                 const analysisResult = await browser.runtime.sendMessage({
@@ -207,6 +208,7 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
                         url: window.location.href,
                         jobTitle: jobTitle,
                         company: company,
+                        linkedinJobId: linkedinJobId, // Add LinkedIn job ID
                         timestamp: Date.now()
                     }
                 });

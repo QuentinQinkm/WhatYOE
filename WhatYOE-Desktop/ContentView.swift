@@ -981,25 +981,37 @@ struct GenericRowView<T: ListRowData>: View {
     @State private var isHovered = false
     
     var body: some View {
-        VStack(alignment: .trailing, spacing: 4) {
-            Text(item.primaryText)
-                .font(isSelected ? .title2 : .headline)
-                .fontWeight(.light)
-                .foregroundColor(.black.opacity(isSelected ? 1.0 : (isHovered ? 1.0 : 0.5)))
-                .lineLimit(1)
+        HStack(spacing: 0) {
+            // Colored left border based on job rating
+            Rectangle()
+                .fill(getBorderColor())
+                .frame(width: getBorderWidth())
                 .animation(.easeInOut(duration: 0.2), value: isSelected)
-                .animation(.easeInOut(duration: 0.15), value: isHovered)
             
-            Text(item.secondaryText)
-                .font(isSelected ? .body : .caption)
-                .fontWeight(.light)
-                .foregroundColor(.black.opacity(isSelected ? 1.0 : (isHovered ? 1.0 : 0.5)))
-                .animation(.easeInOut(duration: 0.2), value: isSelected)
-                .animation(.easeInOut(duration: 0.15), value: isHovered)
+            // Content with padding
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.primaryText)
+                    .font(isSelected ? .title2 : .headline)
+                    .fontWeight(.light)
+                    .foregroundColor(.black.opacity(isSelected ? 1.0 : (isHovered ? 1.0 : 0.5)))
+                    .lineLimit(1)
+                    .animation(.easeInOut(duration: 0.2), value: isSelected)
+                    .animation(.easeInOut(duration: 0.15), value: isHovered)
+                
+                Text(item.secondaryText)
+                    .font(isSelected ? .body : .caption)
+                    .fontWeight(.light)
+                    .foregroundColor(.black.opacity(isSelected ? 1.0 : (isHovered ? 1.0 : 0.5)))
+                    .animation(.easeInOut(duration: 0.2), value: isSelected)
+                    .animation(.easeInOut(duration: 0.15), value: isHovered)
+            }
+            .padding(.leading, 16)
+            .padding(.trailing, 16)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            
+            Spacer()
         }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .trailing)
         .background(Color.clear)
         .contentShape(Rectangle())
         .onHover { hovering in
@@ -1007,6 +1019,44 @@ struct GenericRowView<T: ListRowData>: View {
                 isHovered = hovering
             }
         }
+    }
+    
+    private func getBorderColor() -> Color {
+        // Get the base color based on job rating
+        let baseColor = getRatingColor()
+        
+        // Apply opacity based on state
+        if isSelected || isHovered {
+            return baseColor.opacity(1.0) // 100% opacity on hover/selection
+        } else {
+            return baseColor.opacity(0.6) // 60% opacity by default
+        }
+    }
+    
+    private func getRatingColor() -> Color {
+        // Cast to JobItem to access analysisScores
+        guard let jobItem = item as? JobItem else {
+            return .gray // Fallback for non-job items
+        }
+        
+        let finalScore = jobItem.analysisScores.finalScore
+        
+        // Color coding based on final score (0-4 scale)
+        if finalScore >= 0 && finalScore < 1.3 {
+            return .red // Reject
+        } else if finalScore >= 1.3 && finalScore < 2.0 {
+            return .orange // Poor
+        } else if finalScore >= 2.0 && finalScore < 2.7 {
+            return .yellow // Maybe
+        } else if finalScore >= 2.7 {
+            return .green // Good
+        } else {
+            return .gray // Unknown/Error
+        }
+    }
+    
+    private func getBorderWidth() -> CGFloat {
+        return isSelected ? 8 : 5
     }
 }
 
@@ -1055,8 +1105,10 @@ struct JobListView: View {
                                     print("Like job: \(job.jobTitle)")
                                 }
                                 Button("View on LinkedIn") {
-                                    // TODO: Implement LinkedIn view functionality
-                                    print("View on LinkedIn: \(job.jobTitle)")
+                                    // Open LinkedIn job page using stored job ID
+                                    if let url = URL(string: "https://www.linkedin.com/jobs/view/\(job.jobId)") {
+                                        NSWorkspace.shared.open(url)
+                                    }
                                 }
                             }
                         }
@@ -1126,6 +1178,7 @@ struct JobDetailView: View {
         
         🏢 **Company:** \(job.company)
         💼 **Position:** \(job.jobTitle)
+        🔗 **LinkedIn Job ID:** \(job.jobId)
         📅 **Analyzed:** \(DateFormatter.shortDate.string(from: job.dateAnalyzed))
         
         🎯 **Final Score:** \(String(format: "%.1f", job.analysisScores.finalScore)) / 4.0

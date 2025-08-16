@@ -45,7 +45,7 @@ struct JobAnalysisScores {
 }
 
 struct JobItem {
-    let jobId: String
+    let jobId: String                    // LinkedIn job ID (e.g., "4242941130")
     let jobTitle: String
     let company: String
     let cleanedJobDescription: String
@@ -59,8 +59,9 @@ struct JobItem {
          cleanedJobDescription: String,
          analysisResult: String,
          analysisScores: JobAnalysisScores,
-         resumeId: String) {
-        self.jobId = UUID().uuidString
+         resumeId: String,
+         linkedinJobId: String) {
+        self.jobId = linkedinJobId  // Use LinkedIn job ID instead of UUID
         self.jobTitle = jobTitle
         self.company = company
         self.cleanedJobDescription = cleanedJobDescription

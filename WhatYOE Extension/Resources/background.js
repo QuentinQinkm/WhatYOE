@@ -60,6 +60,7 @@ async function startFourCycleAnalysis(data, sendResponse) {
                     data: {
                         jobTitle: data.jobTitle,
                         company: data.company,
+                        linkedinJobId: data.linkedinJobId, // Add LinkedIn job ID
                         pageUrl: data.url || "unknown"
                     }
                 });
@@ -148,6 +149,7 @@ async function startPhase1(data, sendResponse) {
                     data: {
                         jobTitle: data.jobTitle,
                         company: data.company,
+                        linkedinJobId: data.linkedinJobId, // Add LinkedIn job ID
                         pageUrl: data.url || "unknown"
                     }
                 });
@@ -189,6 +191,7 @@ async function startPhase2(data, sendResponse) {
                     data: {
                         jobTitle: data.jobTitle,
                         company: data.company,
+                        linkedinJobId: data.linkedinJobId, // Add LinkedIn job ID
                         pageUrl: data.url || "unknown"
                     }
                 });
@@ -230,6 +233,7 @@ async function startPhase3(data, sendResponse) {
                     data: {
                         jobTitle: data.jobTitle,
                         company: data.company,
+                        linkedinJobId: data.linkedinJobId, // Add LinkedIn job ID
                         pageUrl: data.url || "unknown"
                     }
                 });
@@ -271,6 +275,7 @@ async function startPhase4(data, sendResponse) {
                     data: {
                         jobTitle: data.jobTitle,
                         company: data.company,
+                        linkedinJobId: data.linkedinJobId, // Add LinkedIn job ID
                         pageUrl: data.url || "unknown"
                     }
                 });

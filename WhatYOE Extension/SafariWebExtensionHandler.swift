@@ -134,14 +134,16 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 if let data = messageDict["data"] as? [String: Any] {
                     let jobTitle = data["jobTitle"] as? String ?? "Unknown Position"
                     let company = data["company"] as? String ?? "Unknown Company"
+                    let linkedinJobId = data["linkedinJobId"] as? String ?? "unknown"
                     let pageUrl = data["pageUrl"] as? String ?? "unknown"
                     
                     // Store in shared defaults for native app access
                     sharedDefaults.set(jobTitle, forKey: "currentJobTitle")
                     sharedDefaults.set(company, forKey: "currentCompany")
+                    sharedDefaults.set(linkedinJobId, forKey: "currentLinkedInJobId")
                     sharedDefaults.set(pageUrl, forKey: "currentPageUrl")
                     
-                    log("💾 Job metadata stored - Title: '\(jobTitle)', Company: '\(company)'")
+                    log("💾 Job metadata stored - Title: '\(jobTitle)', Company: '\(company)', LinkedIn Job ID: '\(linkedinJobId)'")
                     sendResponse(["status": "success", "message": "Job metadata stored"], context: context)
                 } else {
                     sendResponse(["status": "error", "message": "Invalid metadata format"], context: context)

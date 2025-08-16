@@ -43,7 +43,7 @@ struct JobAnalysisScores {
 }
 
 struct JobItem {
-    let jobId: String
+    let jobId: String                    // LinkedIn job ID (e.g., "4242941130")
     let jobTitle: String
     let company: String
     let cleanedJobDescription: String
@@ -57,8 +57,9 @@ struct JobItem {
          cleanedJobDescription: String,
          analysisResult: String,
          analysisScores: JobAnalysisScores,
-         resumeId: String) {
-        self.jobId = UUID().uuidString
+         resumeId: String,
+         linkedinJobId: String) {
+        self.jobId = linkedinJobId  // Use LinkedIn job ID instead of UUID
         self.jobTitle = jobTitle
         self.company = company
         self.cleanedJobDescription = cleanedJobDescription
@@ -160,7 +161,8 @@ class JobManager {
                                    company: String,
                                    cleanedJobDescription: String,
                                    analysisResult: String,
-                                   resumeId: String) -> JobItem {
+                                   resumeId: String,
+                                   linkedinJobId: String) -> JobItem {
         
         // Extract scores from analysis result
         let scores = extractScoresFromAnalysisResult(analysisResult)
@@ -172,7 +174,8 @@ class JobManager {
             cleanedJobDescription: cleanedJobDescription,
             analysisResult: analysisResult,
             analysisScores: scores,
-            resumeId: resumeId
+            resumeId: resumeId,
+            linkedinJobId: linkedinJobId
         )
         
         saveJob(job)
