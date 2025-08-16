@@ -16,6 +16,8 @@
 		6045B901249289530091386F /* images in Resources */ = {isa = PBXBuildFile; fileRef = 6045B900249289530091386F /* images */; };
 		6045B903249289530091386F /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 6045B902249289530091386F /* manifest.json */; };
 		6045B905249289530091386F /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = 6045B904249289530091386F /* background.js */; };
+		BE23E6952E503DFA00C6A9A5 /* EvaluationStructures.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6932E503DFA00C6A9A5 /* EvaluationStructures.swift */; };
+		BE23E6962E503DFA00C6A9A5 /* GuidedEvaluationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6942E503DFA00C6A9A5 /* GuidedEvaluationService.swift */; };
 		BE476B6D2E4BC471002A4D78 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE9CE85A2E4A892F00C8C5D2 /* PDFKit.framework */; };
 		BE476B6E2E4BC195002A4D78 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B6F2E4BC195002A4D78 /* main.swift */; };
 		BE476B9A2E4CF04F002A4D78 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = BE476B932E4CF04F002A4D78 /* Info.plist */; };
@@ -30,6 +32,7 @@
 		BE476BB72E4F79CB002A4D78 /* JobManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BB62E4F79CB002A4D78 /* JobManager.swift */; };
 		BE476BB92E4F79DE002A4D78 /* JobManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BB82E4F79DE002A4D78 /* JobManager.swift */; };
 		BE476BBB2E4F8D09002A4D78 /* ScoreCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BBA2E4F8D09002A4D78 /* ScoreCalculator.swift */; };
+		BE476BBD2E50278C002A4D78 /* GuidedGenerationStructures.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BBC2E50278C002A4D78 /* GuidedGenerationStructures.swift */; };
 		BE9C41AA2E43EA9700073E0D /* FoundationModels.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE9C41A92E43EA9700073E0D /* FoundationModels.framework */; };
 		BE9C41B42E44029700073E0D /* popup.html in Resources */ = {isa = PBXBuildFile; fileRef = BE9C41B22E44029700073E0D /* popup.html */; };
 		BE9C41B52E44029700073E0D /* content.js in Resources */ = {isa = PBXBuildFile; fileRef = BE9C41B12E44029700073E0D /* content.js */; };
@@ -74,6 +77,8 @@
 		6045B904249289530091386F /* background.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = background.js; sourceTree = "<group>"; };
 		6045B90E249289530091386F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		6045B90F249289530091386F /* Native_Messaging_Demo_Extension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Native_Messaging_Demo_Extension.entitlements; sourceTree = "<group>"; };
+		BE23E6932E503DFA00C6A9A5 /* EvaluationStructures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvaluationStructures.swift; sourceTree = "<group>"; };
+		BE23E6942E503DFA00C6A9A5 /* GuidedEvaluationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidedEvaluationService.swift; sourceTree = "<group>"; };
 		BE476B6F2E4BC195002A4D78 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		BE476B792E4CEDD6002A4D78 /* WhatYOE-Desktop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "WhatYOE-Desktop.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BE476B8F2E4CF04F002A4D78 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -89,6 +94,7 @@
 		BE476BB62E4F79CB002A4D78 /* JobManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobManager.swift; sourceTree = "<group>"; };
 		BE476BB82E4F79DE002A4D78 /* JobManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobManager.swift; sourceTree = "<group>"; };
 		BE476BBA2E4F8D09002A4D78 /* ScoreCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreCalculator.swift; sourceTree = "<group>"; };
+		BE476BBC2E50278C002A4D78 /* GuidedGenerationStructures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidedGenerationStructures.swift; sourceTree = "<group>"; };
 		BE9C41A92E43EA9700073E0D /* FoundationModels.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FoundationModels.framework; path = System/Library/Frameworks/FoundationModels.framework; sourceTree = SDKROOT; };
 		BE9C41B12E44029700073E0D /* content.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = content.js; sourceTree = "<group>"; };
 		BE9C41B22E44029700073E0D /* popup.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = popup.html; sourceTree = "<group>"; };
@@ -153,6 +159,9 @@
 		6045B8E3249289520091386F /* WhatYOE */ = {
 			isa = PBXGroup;
 			children = (
+				BE23E6932E503DFA00C6A9A5 /* EvaluationStructures.swift */,
+				BE23E6942E503DFA00C6A9A5 /* GuidedEvaluationService.swift */,
+				BE476BBC2E50278C002A4D78 /* GuidedGenerationStructures.swift */,
 				BE476BBA2E4F8D09002A4D78 /* ScoreCalculator.swift */,
 				BE476BA82E4D40A0002A4D78 /* PromptTemplates.swift */,
 				BE476BB62E4F79CB002A4D78 /* JobManager.swift */,
@@ -348,6 +357,9 @@
 			files = (
 				BE476BBB2E4F8D09002A4D78 /* ScoreCalculator.swift in Sources */,
 				BE476B6E2E4BC195002A4D78 /* main.swift in Sources */,
+				BE476BBD2E50278C002A4D78 /* GuidedGenerationStructures.swift in Sources */,
+				BE23E6952E503DFA00C6A9A5 /* EvaluationStructures.swift in Sources */,
+				BE23E6962E503DFA00C6A9A5 /* GuidedEvaluationService.swift in Sources */,
 				BE476BB72E4F79CB002A4D78 /* JobManager.swift in Sources */,
 				BE476BAB2E4D40A0002A4D78 /* PromptTemplates.swift in Sources */,
 				6045B8E6249289520091386F /* AppDelegate.swift in Sources */,

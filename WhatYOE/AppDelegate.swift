@@ -315,11 +315,96 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func cleanResumeTextWithAI(_ text: String) async throws -> String {
+        // Use Guided Generation for structured resume extraction
         let session = LanguageModelSession(instructions: PromptTemplates.resumeCleaningPrompt)
         let prompt = PromptTemplates.createCleaningPrompt(text: text, isResume: true)
-        let response = try await session.respond(to: prompt)
-        return response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        let response = try await session.respond(to: prompt, generating: CleanedResume.self)
+        
+        // Convert structured data back to text for backward compatibility
+        return formatCleanedResumeAsText(response.content)
     }
+    
+    private func formatCleanedResumeAsText(_ resume: CleanedResume) -> String {
+        var text = ""
+        
+        // Contact Info
+        text += "\(resume.contactInfo.name)\n"
+        if let email = resume.contactInfo.email { text += "Email: \(email)\n" }
+        if let phone = resume.contactInfo.phone { text += "Phone: \(phone)\n" }
+        text += "\n"
+        
+        // Summary
+        if let summary = resume.summary {
+            text += "PROFESSIONAL SUMMARY\n\(summary)\n\n"
+        }
+        
+        // Professional Experience
+        text += "PROFESSIONAL EXPERIENCE\n\n"
+        
+        // Work Experience
+        if !resume.professionalExperience.workExperience.isEmpty {
+            text += "Work Experience\n"
+            for exp in resume.professionalExperience.workExperience {
+                text += "\(exp.role) at \(exp.company)\n"
+                text += "\(exp.startDate) - \(exp.endDate ?? "Present")\n"
+                for achievement in exp.keyAchievements {
+                    text += "• \(achievement)\n"
+                }
+                text += "\n"
+            }
+        }
+        
+        // Other Experience
+        if !resume.professionalExperience.otherExperience.isEmpty {
+            text += "Other Experience\n"
+            for exp in resume.professionalExperience.otherExperience {
+                text += "\(exp.title)"
+                if let org = exp.organization { text += " - \(org)" }
+                text += " (\(exp.experienceType))\n"
+                if let start = exp.startDate {
+                    text += "\(start) - \(exp.endDate ?? "Present")\n"
+                }
+                text += "\(exp.description)\n"
+                if !exp.technologiesUsed.isEmpty {
+                    text += "Technologies: \(exp.technologiesUsed.joined(separator: ", "))\n"
+                }
+                for achievement in exp.achievements {
+                    text += "• \(achievement)\n"
+                }
+                text += "\n"
+            }
+        }
+        
+        // Education
+        if !resume.education.isEmpty {
+            text += "EDUCATION\n"
+            for edu in resume.education {
+                text += "\(edu.degree)"
+                if let field = edu.field { text += " in \(field)" }
+                text += " - \(edu.institution)"
+                if let year = edu.year { text += " (\(year))" }
+                text += "\n"
+            }
+            text += "\n"
+        }
+        
+        // Skills
+        text += "SKILLS\n"
+        if !resume.skills.technicalSkills.isEmpty {
+            text += "Technical Skills: \(resume.skills.technicalSkills.joined(separator: ", "))\n"
+        }
+        if !resume.skills.professionalSkills.isEmpty {
+            text += "Professional Skills: \(resume.skills.professionalSkills.joined(separator: ", "))\n"
+        }
+        if !resume.skills.industrySkills.isEmpty {
+            text += "Industry Skills: \(resume.skills.industrySkills.joined(separator: ", "))\n"
+        }
+        text += "\n"
+        
+        
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
     
     // MARK: - Job Analysis Server
     
@@ -338,14 +423,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // Clean job description first
             let cleanedJob = try await cleanJobDescriptionWithAI(request.jobDescription)
             
-            // Perform 4-round evaluation using existing logic
-            let results = try await performFourRoundEvaluation(
+            // Perform 4-round guided evaluation
+            let evaluation = try await GuidedEvaluationService.performFourRoundGuidedEvaluation(
                 resumeText: request.resumeText,
                 jobDescription: cleanedJob
             )
             
-            // Combine results
-            let combinedResults = combineEvaluationResults(results: results)
+            // Format and combine results
+            let phaseResults = GuidedEvaluationService.formatFourRoundEvaluation(evaluation)
+            let combinedResults = combineEvaluationResults(results: phaseResults)
             
             // Send response back
             let response = AnalysisResponse(
@@ -380,124 +466,78 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func cleanJobDescriptionWithAI(_ text: String) async throws -> String {
+        // Use Guided Generation for structured job description extraction
         let session = LanguageModelSession(instructions: PromptTemplates.jobCleaningPrompt)
         let prompt = PromptTemplates.createCleaningPrompt(text: text, isResume: false)
-        let response = try await session.respond(to: prompt)
-        return response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        let response = try await session.respond(to: prompt, generating: CleanedJobDescription.self)
+        
+        // Convert structured data back to text for backward compatibility
+        return formatCleanedJobAsText(response.content)
     }
     
-    private func performFourRoundEvaluation(resumeText: String, jobDescription: String) async throws -> [String] {
-        let model = SystemLanguageModel.default
+    private func formatCleanedJobAsText(_ job: CleanedJobDescription) -> String {
+        var text = ""
         
-        guard case .available = model.availability else {
-            throw NSError(domain: "AI", code: 1, userInfo: [NSLocalizedDescriptionKey: "AI not available"])
+        // Header
+        text += "\(job.title) at \(job.company)\n\n"
+        
+        // Experience Requirements
+        if let minYears = job.experienceRequired.minimumYears {
+            text += "EXPERIENCE REQUIRED\n"
+            text += "Minimum \(minYears) years - \(job.experienceRequired.level) level\n"
+            if let industry = job.experienceRequired.industryContext {
+                text += "Industry: \(industry)\n"
+            }
+            text += "\n"
         }
         
-        let prompts = [
-            PromptTemplates.yearsEvaluationPrompt,
-            PromptTemplates.educationEvaluationPrompt,
-            PromptTemplates.technicalSkillsEvaluationPrompt,
-            PromptTemplates.relevantExperienceEvaluationPrompt
-        ]
-        
-        print("🚀 Starting concurrent 4-round evaluation...")
-        let startTime = Date()
-        
-        // Create concurrent tasks for all 4 evaluations
-        async let yearsTask = evaluateWithPrompt(
-            prompt: prompts[0],
-            resumeText: resumeText,
-            jobDescription: jobDescription,
-            name: "Years of Experience"
-        )
-        
-        async let educationTask = evaluateWithPrompt(
-            prompt: prompts[1],
-            resumeText: resumeText,
-            jobDescription: jobDescription,
-            name: "Education"
-        )
-        
-        async let skillsTask = evaluateWithPrompt(
-            prompt: prompts[2],
-            resumeText: resumeText,
-            jobDescription: jobDescription,
-            name: "Technical Skills"
-        )
-        
-        async let experienceTask = evaluateWithPrompt(
-            prompt: prompts[3],
-            resumeText: resumeText,
-            jobDescription: jobDescription,
-            name: "Relevant Experience"
-        )
-        
-        // Wait for all tasks to complete concurrently
-        let results = try await [
-            yearsTask,
-            educationTask,
-            skillsTask,
-            experienceTask
-        ]
-        
-        let duration = Date().timeIntervalSince(startTime)
-        print("✅ Concurrent 4-round evaluation completed in \(String(format: "%.1f", duration)) seconds")
-        
-        return results
-    }
-    
-    // Helper function for individual evaluation tasks
-    private func evaluateWithPrompt(prompt: String, resumeText: String, jobDescription: String, name: String) async throws -> String {
-        let startTime = Date()
-        print("🔄 Starting \(name) evaluation at \(startTime)...")
-        
-        let session = LanguageModelSession(instructions: prompt)
-        let userQuery = "Resume:\n\(resumeText)\n\nJob Description:\n\(jobDescription)"
-        let response = try await session.respond(to: userQuery)
-        
-        let duration = Date().timeIntervalSince(startTime)
-        print("✅ Completed \(name) evaluation in \(String(format: "%.2f", duration))s")
-        return response.content
-    }
-    
-    private func performComprehensiveEvaluation(resumeText: String, jobDescription: String) async throws -> String {
-        let model = SystemLanguageModel.default
-        
-        guard case .available = model.availability else {
-            throw NSError(domain: "AI", code: 1, userInfo: [NSLocalizedDescriptionKey: "AI not available"])
+        // Education
+        if let education = job.educationRequirements {
+            text += "EDUCATION\n\(education)\n\n"
         }
         
-        // Use the comprehensive evaluation prompt
-        let comprehensivePrompt = PromptTemplates.createComprehensiveEvaluationPrompt(
-            cleanedResume: resumeText,
-            cleanedJob: jobDescription
-        )
+        // Required Skills
+        text += "REQUIRED SKILLS\n"
+        if !job.requiredSkills.technicalSkills.isEmpty {
+            text += "Technical Skills: \(job.requiredSkills.technicalSkills.joined(separator: ", "))\n"
+        }
+        if !job.requiredSkills.professionalSkills.isEmpty {
+            text += "Professional Skills: \(job.requiredSkills.professionalSkills.joined(separator: ", "))\n"
+        }
+        if !job.requiredSkills.industrySkills.isEmpty {
+            text += "Industry Skills: \(job.requiredSkills.industrySkills.joined(separator: ", "))\n"
+        }
+        text += "\n"
         
-        print("🚀 Comprehensive prompt length: \(comprehensivePrompt.count) characters")
-        print("🚀 Resume text length: \(resumeText.count) characters")
-        print("🚀 Job description length: \(jobDescription.count) characters")
+        // Preferred Skills
+        if let preferred = job.preferredSkills, 
+           !preferred.technicalSkills.isEmpty || !preferred.professionalSkills.isEmpty || !preferred.industrySkills.isEmpty {
+            text += "PREFERRED SKILLS\n"
+            if !preferred.technicalSkills.isEmpty {
+                text += "Technical Skills: \(preferred.technicalSkills.joined(separator: ", "))\n"
+            }
+            if !preferred.professionalSkills.isEmpty {
+                text += "Professional Skills: \(preferred.professionalSkills.joined(separator: ", "))\n"
+            }
+            if !preferred.industrySkills.isEmpty {
+                text += "Industry Skills: \(preferred.industrySkills.joined(separator: ", "))\n"
+            }
+            text += "\n"
+        }
         
-        // Calculate token usage breakdown
-        let promptTemplateLength = comprehensivePrompt.count - resumeText.count - jobDescription.count
-        let estimatedPromptTokens = promptTemplateLength / 4
-        let estimatedResumeTokens = resumeText.count / 4
-        let estimatedJobTokens = jobDescription.count / 4
-        let totalEstimatedTokens = estimatedPromptTokens + estimatedResumeTokens + estimatedJobTokens
         
-        print("🚀 Token breakdown:")
-        print("   - Prompt template: ~\(estimatedPromptTokens) tokens")
-        print("   - Resume text: ~\(estimatedResumeTokens) tokens")
-        print("   - Job description: ~\(estimatedJobTokens) tokens")
-        print("   - Total estimated: ~\(totalEstimatedTokens) tokens")
-        print("   - Available: 4,096 tokens")
-        print("   - Remaining: ~\(4096 - totalEstimatedTokens) tokens")
+        // Responsibilities
+        if !job.responsibilities.isEmpty {
+            text += "\nRESPONSIBILITIES\n"
+            for resp in job.responsibilities {
+                text += "• \(resp)\n"
+            }
+        }
         
-        // Create session with instructions, then send the prompt
-        let session = LanguageModelSession(instructions: "You are a professional recruiter. Evaluate candidates comprehensively.")
-        let response = try await session.respond(to: comprehensivePrompt)
-        
-        return response.content
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
+    
+    
     
     private func combineEvaluationResults(results: [String]) -> String {
         let (formattedOutput, _, _, _) = ScoreCalculator.processEvaluationResults(results: results)
@@ -715,19 +755,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let results: String
             
             if analysisMethod == "singleRun" || analysisType == "comprehensive" {
-                // Use comprehensive single-run analysis
-                print("🚀 Using comprehensive single-run analysis")
-                results = try await performComprehensiveEvaluation(
+                // Use comprehensive guided evaluation
+                print("🚀 Using comprehensive guided evaluation")
+                let evaluation = try await GuidedEvaluationService.performComprehensiveGuidedEvaluation(
                     resumeText: request.resumeText,
                     jobDescription: cleanedJob
                 )
+                results = GuidedEvaluationService.formatComprehensiveEvaluation(evaluation)
             } else {
-                // Use traditional 4-run analysis
-                print("🔄 Using traditional 4-run analysis")
-                let phaseResults = try await performFourRoundEvaluation(
+                // Use four-round guided evaluation
+                print("🔄 Using four-round guided evaluation")
+                let evaluation = try await GuidedEvaluationService.performFourRoundGuidedEvaluation(
                     resumeText: request.resumeText,
                     jobDescription: cleanedJob
                 )
+                let phaseResults = GuidedEvaluationService.formatFourRoundEvaluation(evaluation)
                 results = combineEvaluationResults(results: phaseResults)
             }
             
@@ -817,21 +859,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let results: String
             
             if analysisMethod == "singleRun" {
-                // Use comprehensive single-run analysis
-                print("🚀 Using comprehensive single-run analysis")
+                // Use comprehensive guided evaluation
+                print("🚀 Using comprehensive guided evaluation")
                 
-                results = try await performComprehensiveEvaluation(
+                let evaluation = try await GuidedEvaluationService.performComprehensiveGuidedEvaluation(
                     resumeText: request.resumeText,
                     jobDescription: cleanedJob
                 )
+                results = GuidedEvaluationService.formatComprehensiveEvaluation(evaluation)
             } else {
-                // Use traditional 4-run analysis
-                print("🔄 Using traditional 4-run analysis")
+                // Use four-round guided evaluation
+                print("🔄 Using four-round guided evaluation")
                 
-                let phaseResults = try await performFourRoundEvaluation(
+                let evaluation = try await GuidedEvaluationService.performFourRoundGuidedEvaluation(
                     resumeText: request.resumeText,
                     jobDescription: cleanedJob
                 )
+                let phaseResults = GuidedEvaluationService.formatFourRoundEvaluation(evaluation)
                 results = combineEvaluationResults(results: phaseResults)
             }
             

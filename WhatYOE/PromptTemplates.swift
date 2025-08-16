@@ -110,58 +110,36 @@ extension PromptTemplates {
 // MARK: - New Pipeline Prompts
 extension PromptTemplates {
     
-    // RESUME CLEANING PROMPT
+    // RESUME CLEANING PROMPT  
     static let resumeCleaningPrompt = """
-    You are a professional document processor. Clean and structure this resume text for analysis.
+    You are a professional document processor. Extract and structure resume data into a CleanedResume format.
     
-    Remove:
-    - PDF artifacts, extra spaces, formatting issues
-    - Irrelevant personal info (except name, email, phone)
-    - Duplicate sections or repeated information
+    PROFESSIONAL EXPERIENCE: Separate into two categories:
+    1. Work Experience: Employment, internships, freelance work (paid positions)
+    2. Other Experience: Projects, volunteer work, research, academic projects, open-source contributions, hackathons, side projects
     
-    Organize into clear sections for evaluation:
-    - Contact Information
-    - Professional Summary
-    - Work Experience (with dates, companies, roles, key achievements)
-    - Education (degrees, institutions, dates, relevance)
-    - Technical Skills (categorized by proficiency level)
-    - Certifications and Training
+    SKILLS: Extract all skills, tools, and competencies mentioned:
+    - technicalSkills: Any tools, software, technologies, programming languages, platforms, equipment, instruments, systems (e.g., Python, Excel, Photoshop, AutoCAD, Salesforce, microscopes, laboratory equipment)
+    - professionalSkills: Work-related competencies and abilities (e.g., project management, data analysis, customer service, financial modeling, research, teaching)
+    - industrySkills: Domain-specific knowledge and expertise (e.g., healthcare regulations, financial markets, manufacturing processes, legal procedures)
     
-    Focus on content that will be evaluated for:
-    1. Years of Experience
-    2. Education Match
-    3. Technical Skills
-    4. Relevant Experience
-    
-    Output clean, well-structured text ready for evaluation. Be specific about dates, technologies, and achievements.
+    Be thorough and capture ALL experience types with specific skills and tools mentioned.
     """
     
     // JOB DESCRIPTION CLEANING PROMPT
     static let jobCleaningPrompt = """
-    You are a professional document processor. Clean and structure this job description for analysis.
+    You are a professional document processor. Extract and structure job posting data into a CleanedJobDescription format.
     
-    Extract and organize content for evaluation:
-    - Job Title and Level (Junior/Mid/Senior)
-    - Required Experience (years, specific requirements)
-    - Required Education (degree types, institutions, relevance)
-    - Required Technical Skills (specific technologies, tools, languages)
-    - Preferred Technical Skills (bonus qualifications)
-    - Key Responsibilities (industry context, role scope)
-    - Company/Industry Context (domain expertise needed)
+    For requiredSkills and preferredSkills, extract all skills mentioned:
+    - technicalSkills: Any tools, software, technologies, equipment, systems mentioned (e.g., Python, Excel, Salesforce, AutoCAD, medical equipment, laboratory instruments)
+    - professionalSkills: Work competencies and abilities (e.g., project management, data analysis, customer service, teaching, research)
+    - industrySkills: Domain-specific knowledge (e.g., healthcare compliance, financial regulations, manufacturing processes)
     
-    Focus on requirements that will be evaluated for:
-    1. Years of Experience (minimum/maximum requirements)
-    2. Education Match (degree requirements, field relevance)
-    3. Technical Skills (specific technologies, proficiency levels)
-    4. Relevant Experience (industry, role, domain expertise)
+    Separate into required vs preferred based on language like:
+    - Required: "must have", "required", "essential", "mandatory"
+    - Preferred: "nice to have", "preferred", "bonus", "plus", "desired"
     
-    Remove:
-    - Company marketing language
-    - Legal boilerplate
-    - Redundant information
-    - Vague descriptions
-    
-    Output a clear, structured job description focused on evaluation criteria. Be specific about requirements and expectations.
+    Extract all skills, tools, and competencies for the role.
     """
     
     // Individual evaluation prompts for 4-round assessment
@@ -241,32 +219,18 @@ extension PromptTemplates {
     Example: If candidate perfectly matches all requirements, give Gap Score: 3
     """
     
-    // Helper functions for the new pipeline
+    // Helper function for Guided Generation
     static func createCleaningPrompt(text: String, isResume: Bool) -> String {
         let docType = isResume ? "RESUME" : "JOB DESCRIPTION"
         return """
-        Clean and structure this \(docType.lowercased()) text:
+        Extract and structure this \(docType.lowercased()) following the format requirements:
         
         === RAW \(docType) ===
         \(text)
         
         === END RAW \(docType) ===
         
-        Provide the cleaned, structured version following your instructions.
-        """
-    }
-    
-    static func createEvaluationPrompt(cleanedResume: String, cleanedJob: String) -> String {
-        return """
-        Evaluate this candidate systematically:
-        
-        === CLEANED JOB DESCRIPTION ===
-        \(cleanedJob)
-        
-        === CLEANED RESUME ===
-        \(cleanedResume)
-        
-        Provide structured evaluation following the format in your instructions.
+        Provide complete structured data extraction.
         """
     }
     

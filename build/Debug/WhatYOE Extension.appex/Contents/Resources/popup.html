@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            margin: 0;
+            line-height: normal;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            border-radius: 0;
+            -webkit-appearance: none;
+        }
+        
+        html {
+            border-radius: 0;
+            -webkit-appearance: none;
+        }
+        
+        .header {
+            text-align: right;
+            margin-bottom: 15px;
+            width: 100%;
+        }
+        
+        .header h3 {
+            margin: 0;
+            color: #333;
+            font-size: 16px;
+            font-weight: 300;
+        }
+        
+        .toggle-group {
+            width: fit-content;
+        }
+        
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            width: fit-content;
+        }
+        
+        .toggle-label {
+            position: relative;
+            font-weight: 300;
+            white-space: nowrap;
+            font-size: 14px;
+            width: 90px; /* Reduced width to reduce gap */
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 56px;
+            height: 22px;
+            background-color: #999;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0;
+            font-size: 14px;
+            font-weight: 300;
+            color: white;
+        }
+        
+        .toggle-switch.active {
+            background-color: #007AFF;
+        }
+        
+        .toggle-text {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 14px;
+            font-weight: 300;
+            color: white;
+            z-index: 1;
+            transition: opacity 0.3s;
+        }
+        
+        .toggle-text.off {
+            right: 6px;
+        }
+        
+        .toggle-text.on {
+            left: 6px;
+        }
+        
+        .toggle-switch:not(.active) .toggle-text.on {
+            opacity: 0;
+        }
+        
+        .toggle-switch.active .toggle-text.off {
+            opacity: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 18px;
+            height: 18px;
+            background-color: white;
+            transition: transform 0.3s;
+            z-index: 2;
+        }
+        
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(34px);
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+            width: 100%;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 300;
+            color: #555;
+            font-size: 14px;
+        }
+        
+        .my-years-of {
+            position: relative;
+            font-size: 24px;
+            font-weight: 300;
+            white-space: nowrap;
+            width: fit-content;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        .analyze-jobs {
+            position: relative;
+            font-weight: 300;
+        }
+        
+        .property-1default {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            border: 1px solid #000;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
+        
+        .property-1hover {
+            position: absolute;
+            top: 79px;
+            left: 20px;
+            background-color: #fffbfb;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
+        
+        .property-1pressed {
+            position: absolute;
+            top: 138px;
+            left: 20px;
+            background-color: #5c5c5c;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            color: #fff;
+        }
+        
+        /* Apply Figma styles to the actual button */
+        .analyze-btn {
+            border: 1px solid #000;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            font-size: 14px;
+            font-weight: 300;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: fit-content;
+            color: #000;
+        }
+        
+        .analyze-btn:hover {
+            background-color: #fffbfb;
+            border: 1px solid #fffbfb;
+        }
+        
+        .analyze-btn:active {
+            background-color: #5c5c5c;
+            color: #fff;
+            border: 1px solid #5c5c5c;
+        }
+        
+        .analyze-btn:disabled {
+            background-color: #ccc;
+            color: #666;
+            cursor: not-allowed;
+            border-color: #ccc;
+        }
+        
+        /* Year adjustment buttons */
+        .year-adjust-container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 13px;
+            font-size: 40px;
+            width: fit-content;
+        }
+        
+        .year-btn {
+            width: 31px;
+            height: 31px;
+            border: 1px solid #000;
+            background-color: transparent;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            padding: 0;
+        }
+        
+        .year-btn:hover {
+            background-color: #fffbfb;
+            border: 1px solid #fffbfb;
+        }
+        
+        .year-btn:active {
+            background-color: #5c5c5c;
+            border: 1px solid #5c5c5c;
+        }
+        
+        .year-btn:active .year-icon {
+            filter: brightness(0) invert(1);
+        }
+        
+        .year-icon {
+            width: 17px;
+            height: 17px;
+            pointer-events: none;
+        }
+        
+        .year-display {
+            position: relative;
+            white-space: nowrap;
+        }
+        
+        .stats {
+            background-color: #f8f9fa;
+            padding: 10px;
+            font-size: 13px;
+        }
+        
+        .stats h4 {
+            margin: 0 0 8px 0;
+            color: #333;
+            font-size: 14px;
+            font-weight: 300;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #666;
+        }
+        
+        .stat-value {
+            font-weight: 300;
+            color: #333;
+        }
+        
+        .legend {
+            font-size: 11px;
+            color: #666;
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        .auto-analysis-on-parent {
+            position: relative;
+            background-color: #e0e0e0;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding: 30px;
+            box-sizing: border-box;
+            gap: 13px;
+            text-align: left;
+            font-size: 12px;
+            color: #000;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        .status-message {
+            text-align: left;
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+            min-height: 15px;
+            width: 100%;
+        }
+        
+        .status-message.error {
+            color: #ff0000;
+        }
+        
+        .update-resume-link {
+            text-align: center;
+            font-size: 14px;
+            color: #007AFF;
+            cursor: pointer;
+            margin-bottom: 15px;
+            text-decoration: underline;
+            font-weight: 300;
+        }
+        
+        .update-resume-link:hover {
+            color: #005bb5;
+        }
+        
+        .resume-selector {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        
+        .resume-selector label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 300;
+            color: #555;
+            font-size: 14px;
+        }
+        
+        .resume-selector select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+            box-sizing: border-box;
+            background-color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="auto-analysis-on-parent">
+        <div class="update-resume-link" id="updateResumeLink">Import</div>
+        
+        <div class="resume-selector">
+            <label for="resumeSelect">Select Resume:</label>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <select id="resumeSelect">
+                    <option value="">Loading...</option>
+                </select>
+                <button id="refreshResumesBtn" style="padding: 8px 12px; border: 1px solid #ccc; background: white; cursor: pointer; font-size: 12px;">↻</button>
+            </div>
+        </div>
+        
+        <div class="toggle-group">
+            <div class="toggle-container">
+                <span class="toggle-label" id="autoToggleLabel">Auto-Analysis</span>
+                <div id="autoToggle" class="toggle-switch">
+                    <span class="toggle-text off">OFF</span>
+                    <span class="toggle-text on">ON</span>
+                    <div class="toggle-slider"></div>
+                </div>
+            </div>
+        </div>
+        
+        
+        <div class="analyze-btn" id="analyzeButton">Analyze Resume-Job Match</div>
+        
+        <div id="statusMessage" class="status-message">Loading resumes...</div>
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>
