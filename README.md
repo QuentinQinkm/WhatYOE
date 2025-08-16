@@ -4,7 +4,7 @@ A macOS application that analyzes how well a resume matches a job description us
 
 ## ⚠️ Current Status - Development Version
 -----Aug 16------
-- Fix app calling from background bug
+- Fix the bug of old app calling from background
 - Used Guided Generation, significant more reliable and consistent result. Speed up one analysis from 35-45 sec to 17-27 sec
 
 -----Aug 15------
