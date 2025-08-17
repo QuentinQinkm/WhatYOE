@@ -1,5 +1,13 @@
 import SwiftUI
 
+// MARK: - Job Group Structure
+private struct JobGroup {
+    let category: String
+    let color: Color
+    let jobs: [JobItem]
+    let sortOrder: Int
+}
+
 struct JobListView: View {
     let jobs: [JobItem]
     @Binding var selectedJob: JobItem?
@@ -7,6 +15,35 @@ struct JobListView: View {
     let resumeOptions: [(id: String, name: String)]
     let onDelete: (JobItem) -> Void
     let onResumeSelectionChanged: (String?) -> Void
+    
+    // State for collapsible sections
+    @State private var collapsedSections: Set<String> = []
+    
+    // MARK: - Computed Properties
+    private var groupedJobs: [JobGroup] {
+        let grouped = Dictionary(grouping: jobs) { job in
+            AppColors.categoryForScore(job.analysisScores.finalScore)
+        }
+        
+        let groups = [
+            JobGroup(category: "Good", color: AppColors.goodGreen, jobs: grouped["Good"] ?? [], sortOrder: 0),
+            JobGroup(category: "Maybe", color: AppColors.maybeYellow, jobs: grouped["Maybe"] ?? [], sortOrder: 1),
+            JobGroup(category: "Poor", color: AppColors.poorRed, jobs: grouped["Poor"] ?? [], sortOrder: 2),
+            JobGroup(category: "Rejected", color: AppColors.rejectedBlack, jobs: grouped["Rejected"] ?? [], sortOrder: 3)
+        ]
+        
+        return groups
+            .filter { !$0.jobs.isEmpty }
+            .sorted { $0.sortOrder < $1.sortOrder }
+            .map { group in
+                JobGroup(
+                    category: group.category,
+                    color: group.color,
+                    jobs: group.jobs.sorted { $0.analysisScores.finalScore > $1.analysisScores.finalScore },
+                    sortOrder: group.sortOrder
+                )
+            }
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -56,24 +93,66 @@ struct JobListView: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 0) {
-                            ForEach(jobs, id: \.jobId) { job in
-                                GenericRowView(
-                                    item: job,
-                                    isSelected: selectedJob?.jobId == job.jobId
-                                )
-                                .onTapGesture {
-                                    selectedJob = job
+                            ForEach(groupedJobs, id: \.category) { group in
+                                // Section Header with stroke styling and collapse functionality
+                                HStack(spacing: 0) {
+                                    Rectangle()
+                                        .fill(group.color)
+                                        .frame(width: 5)
+                                    
+                                    HStack {
+                                        Image(systemName: collapsedSections.contains(group.category) ? "chevron.right" : "chevron.down")
+                                            .font(.system(size: 10, weight: .light))
+                                            .foregroundColor(.black)
+                                            .animation(.easeInOut(duration: 0.2), value: collapsedSections.contains(group.category))
+                                        
+                                        Text(group.category)
+                                            .font(.system(size: 12, weight: .light))
+                                            .foregroundColor(.black)
+                                        
+                                        Spacer()
+                                        
+                                        Text("\(group.jobs.count)")
+                                            .font(.system(size: 12, weight: .light))
+                                            .foregroundColor(.black)
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
                                 }
-                                .contextMenu {
-                                    Button("Delete", role: .destructive) {
-                                        onDelete(job)
+                                .background(Color.black.opacity(0.05))
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        if collapsedSections.contains(group.category) {
+                                            collapsedSections.remove(group.category)
+                                        } else {
+                                            collapsedSections.insert(group.category)
+                                        }
                                     }
-                                    Button("Like") {
-                                        print("Like job: \(job.jobTitle)")
-                                    }
-                                    Button("View on LinkedIn") {
-                                        if let url = URL(string: "https://www.linkedin.com/jobs/view/\(job.jobId)") {
-                                            NSWorkspace.shared.open(url)
+                                }
+                                
+                                // Jobs in this category (only show if not collapsed)
+                                if !collapsedSections.contains(group.category) {
+                                    ForEach(group.jobs, id: \.jobId) { job in
+                                        GenericRowView(
+                                            item: job,
+                                            isSelected: selectedJob?.jobId == job.jobId
+                                        )
+                                        .onTapGesture {
+                                            selectedJob = job
+                                        }
+                                        .contextMenu {
+                                            Button("Delete", role: .destructive) {
+                                                onDelete(job)
+                                            }
+                                            Button("Like") {
+                                                print("Like job: \(job.jobTitle)")
+                                            }
+                                            Button("View on LinkedIn") {
+                                                if let url = URL(string: "https://www.linkedin.com/jobs/view/\(job.jobId)") {
+                                                    NSWorkspace.shared.open(url)
+                                                }
+                                            }
                                         }
                                     }
                                 }

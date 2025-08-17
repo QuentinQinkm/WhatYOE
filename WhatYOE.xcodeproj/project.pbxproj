@@ -35,6 +35,7 @@
 		BE23E6B92E50FC9C00C6A9A5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6B82E50FC9C00C6A9A5 /* ContentView.swift */; };
 		BE23E6BB2E52127200C6A9A5 /* FileManager+Jobs.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6BA2E52127200C6A9A5 /* FileManager+Jobs.swift */; };
 		BE23E6BD2E5212C500C6A9A5 /* FileManager+Jobs.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6BC2E5212C500C6A9A5 /* FileManager+Jobs.swift */; };
+		BE23E6BF2E5234DE00C6A9A5 /* AppColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6BE2E5234DE00C6A9A5 /* AppColors.swift */; };
 		BE476B6D2E4BC471002A4D78 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE9CE85A2E4A892F00C8C5D2 /* PDFKit.framework */; };
 		BE476B6E2E4BC195002A4D78 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B6F2E4BC195002A4D78 /* main.swift */; };
 		BE476B9A2E4CF04F002A4D78 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = BE476B932E4CF04F002A4D78 /* Info.plist */; };
@@ -112,6 +113,7 @@
 		BE23E6B82E50FC9C00C6A9A5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		BE23E6BA2E52127200C6A9A5 /* FileManager+Jobs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FileManager+Jobs.swift"; sourceTree = "<group>"; };
 		BE23E6BC2E5212C500C6A9A5 /* FileManager+Jobs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FileManager+Jobs.swift"; sourceTree = "<group>"; };
+		BE23E6BE2E5234DE00C6A9A5 /* AppColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppColors.swift; sourceTree = "<group>"; };
 		BE476B6F2E4BC195002A4D78 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		BE476B792E4CEDD6002A4D78 /* WhatYOE-Desktop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "WhatYOE-Desktop.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BE476B8F2E4CF04F002A4D78 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -288,6 +290,7 @@
 		BE476B992E4CF04F002A4D78 /* WhatYOE-Desktop */ = {
 			isa = PBXGroup;
 			children = (
+				BE23E6BE2E5234DE00C6A9A5 /* AppColors.swift */,
 				BE23E6BC2E5212C500C6A9A5 /* FileManager+Jobs.swift */,
 				BE23E6B82E50FC9C00C6A9A5 /* ContentView.swift */,
 				BE23E69D2E50FC7300C6A9A5 /* Components */,
@@ -470,6 +473,7 @@
 				BE23E6B42E50FC7300C6A9A5 /* DateFormatter+Extensions.swift in Sources */,
 				BE23E6B52E50FC7300C6A9A5 /* AnalysisView.swift in Sources */,
 				BE23E6B62E50FC7300C6A9A5 /* VisualEffectView.swift in Sources */,
+				BE23E6BF2E5234DE00C6A9A5 /* AppColors.swift in Sources */,
 				BE23E6B72E50FC7300C6A9A5 /* JobDetailView.swift in Sources */,
 				BE476B9D2E4CF04F002A4D78 /* DesktopAppDelegate.swift in Sources */,
 				BE476BB12E4E430E002A4D78 /* SwiftUIApp.swift in Sources */,
