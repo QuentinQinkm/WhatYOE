@@ -18,6 +18,21 @@
 		6045B905249289530091386F /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = 6045B904249289530091386F /* background.js */; };
 		BE23E6952E503DFA00C6A9A5 /* EvaluationStructures.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6932E503DFA00C6A9A5 /* EvaluationStructures.swift */; };
 		BE23E6962E503DFA00C6A9A5 /* GuidedEvaluationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6942E503DFA00C6A9A5 /* GuidedEvaluationService.swift */; };
+		BE23E6AA2E50FC7300C6A9A5 /* JobListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6A42E50FC7300C6A9A5 /* JobListView.swift */; };
+		BE23E6AB2E50FC7300C6A9A5 /* ResumeContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E69B2E50FC7300C6A9A5 /* ResumeContentView.swift */; };
+		BE23E6AC2E50FC7300C6A9A5 /* ContentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6A02E50FC7300C6A9A5 /* ContentViewModel.swift */; };
+		BE23E6AD2E50FC7300C6A9A5 /* PendingResumeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6A52E50FC7300C6A9A5 /* PendingResumeView.swift */; };
+		BE23E6AE2E50FC7300C6A9A5 /* RenameDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6A62E50FC7300C6A9A5 /* RenameDialog.swift */; };
+		BE23E6AF2E50FC7300C6A9A5 /* ResumeListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6A82E50FC7300C6A9A5 /* ResumeListView.swift */; };
+		BE23E6B02E50FC7300C6A9A5 /* GlassButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E69A2E50FC7300C6A9A5 /* GlassButtons.swift */; };
+		BE23E6B12E50FC7300C6A9A5 /* CustomTabPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6982E50FC7300C6A9A5 /* CustomTabPicker.swift */; };
+		BE23E6B22E50FC7300C6A9A5 /* ResumeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6A72E50FC7300C6A9A5 /* ResumeDetailView.swift */; };
+		BE23E6B32E50FC7300C6A9A5 /* GenericRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6992E50FC7300C6A9A5 /* GenericRowView.swift */; };
+		BE23E6B42E50FC7300C6A9A5 /* DateFormatter+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E69E2E50FC7300C6A9A5 /* DateFormatter+Extensions.swift */; };
+		BE23E6B52E50FC7300C6A9A5 /* AnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6A22E50FC7300C6A9A5 /* AnalysisView.swift */; };
+		BE23E6B62E50FC7300C6A9A5 /* VisualEffectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E69C2E50FC7300C6A9A5 /* VisualEffectView.swift */; };
+		BE23E6B72E50FC7300C6A9A5 /* JobDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6A32E50FC7300C6A9A5 /* JobDetailView.swift */; };
+		BE23E6B92E50FC9C00C6A9A5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6B82E50FC9C00C6A9A5 /* ContentView.swift */; };
 		BE476B6D2E4BC471002A4D78 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE9CE85A2E4A892F00C8C5D2 /* PDFKit.framework */; };
 		BE476B6E2E4BC195002A4D78 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B6F2E4BC195002A4D78 /* main.swift */; };
 		BE476B9A2E4CF04F002A4D78 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = BE476B932E4CF04F002A4D78 /* Info.plist */; };
@@ -28,7 +43,6 @@
 		BE476BAB2E4D40A0002A4D78 /* PromptTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BA82E4D40A0002A4D78 /* PromptTemplates.swift */; };
 		BE476BB12E4E430E002A4D78 /* SwiftUIApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BB02E4E430E002A4D78 /* SwiftUIApp.swift */; };
 		BE476BB42E4E430E002A4D78 /* AnalysisManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BAD2E4E430E002A4D78 /* AnalysisManager.swift */; };
-		BE476BB52E4E430E002A4D78 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BAE2E4E430E002A4D78 /* ContentView.swift */; };
 		BE476BB72E4F79CB002A4D78 /* JobManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BB62E4F79CB002A4D78 /* JobManager.swift */; };
 		BE476BB92E4F79DE002A4D78 /* JobManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BB82E4F79DE002A4D78 /* JobManager.swift */; };
 		BE476BBB2E4F8D09002A4D78 /* ScoreCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476BBA2E4F8D09002A4D78 /* ScoreCalculator.swift */; };
@@ -79,6 +93,21 @@
 		6045B90F249289530091386F /* Native_Messaging_Demo_Extension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Native_Messaging_Demo_Extension.entitlements; sourceTree = "<group>"; };
 		BE23E6932E503DFA00C6A9A5 /* EvaluationStructures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvaluationStructures.swift; sourceTree = "<group>"; };
 		BE23E6942E503DFA00C6A9A5 /* GuidedEvaluationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidedEvaluationService.swift; sourceTree = "<group>"; };
+		BE23E6982E50FC7300C6A9A5 /* CustomTabPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTabPicker.swift; sourceTree = "<group>"; };
+		BE23E6992E50FC7300C6A9A5 /* GenericRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenericRowView.swift; sourceTree = "<group>"; };
+		BE23E69A2E50FC7300C6A9A5 /* GlassButtons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassButtons.swift; sourceTree = "<group>"; };
+		BE23E69B2E50FC7300C6A9A5 /* ResumeContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResumeContentView.swift; sourceTree = "<group>"; };
+		BE23E69C2E50FC7300C6A9A5 /* VisualEffectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffectView.swift; sourceTree = "<group>"; };
+		BE23E69E2E50FC7300C6A9A5 /* DateFormatter+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DateFormatter+Extensions.swift"; sourceTree = "<group>"; };
+		BE23E6A02E50FC7300C6A9A5 /* ContentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentViewModel.swift; sourceTree = "<group>"; };
+		BE23E6A22E50FC7300C6A9A5 /* AnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisView.swift; sourceTree = "<group>"; };
+		BE23E6A32E50FC7300C6A9A5 /* JobDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobDetailView.swift; sourceTree = "<group>"; };
+		BE23E6A42E50FC7300C6A9A5 /* JobListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobListView.swift; sourceTree = "<group>"; };
+		BE23E6A52E50FC7300C6A9A5 /* PendingResumeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingResumeView.swift; sourceTree = "<group>"; };
+		BE23E6A62E50FC7300C6A9A5 /* RenameDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenameDialog.swift; sourceTree = "<group>"; };
+		BE23E6A72E50FC7300C6A9A5 /* ResumeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResumeDetailView.swift; sourceTree = "<group>"; };
+		BE23E6A82E50FC7300C6A9A5 /* ResumeListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResumeListView.swift; sourceTree = "<group>"; };
+		BE23E6B82E50FC9C00C6A9A5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		BE476B6F2E4BC195002A4D78 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		BE476B792E4CEDD6002A4D78 /* WhatYOE-Desktop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "WhatYOE-Desktop.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BE476B8F2E4CF04F002A4D78 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -89,7 +118,6 @@
 		BE476BA82E4D40A0002A4D78 /* PromptTemplates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptTemplates.swift; sourceTree = "<group>"; };
 		BE476BA92E4D40A0002A4D78 /* ResumeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResumeManager.swift; sourceTree = "<group>"; };
 		BE476BAD2E4E430E002A4D78 /* AnalysisManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisManager.swift; sourceTree = "<group>"; };
-		BE476BAE2E4E430E002A4D78 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		BE476BB02E4E430E002A4D78 /* SwiftUIApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftUIApp.swift; sourceTree = "<group>"; };
 		BE476BB62E4F79CB002A4D78 /* JobManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobManager.swift; sourceTree = "<group>"; };
 		BE476BB82E4F79DE002A4D78 /* JobManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobManager.swift; sourceTree = "<group>"; };
@@ -210,12 +238,58 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
+		BE23E69D2E50FC7300C6A9A5 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				BE23E6982E50FC7300C6A9A5 /* CustomTabPicker.swift */,
+				BE23E6992E50FC7300C6A9A5 /* GenericRowView.swift */,
+				BE23E69A2E50FC7300C6A9A5 /* GlassButtons.swift */,
+				BE23E69B2E50FC7300C6A9A5 /* ResumeContentView.swift */,
+				BE23E69C2E50FC7300C6A9A5 /* VisualEffectView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		BE23E69F2E50FC7300C6A9A5 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				BE23E69E2E50FC7300C6A9A5 /* DateFormatter+Extensions.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		BE23E6A12E50FC7300C6A9A5 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				BE23E6A02E50FC7300C6A9A5 /* ContentViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		BE23E6A92E50FC7300C6A9A5 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				BE23E6A22E50FC7300C6A9A5 /* AnalysisView.swift */,
+				BE23E6A32E50FC7300C6A9A5 /* JobDetailView.swift */,
+				BE23E6A42E50FC7300C6A9A5 /* JobListView.swift */,
+				BE23E6A52E50FC7300C6A9A5 /* PendingResumeView.swift */,
+				BE23E6A62E50FC7300C6A9A5 /* RenameDialog.swift */,
+				BE23E6A72E50FC7300C6A9A5 /* ResumeDetailView.swift */,
+				BE23E6A82E50FC7300C6A9A5 /* ResumeListView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
 		BE476B992E4CF04F002A4D78 /* WhatYOE-Desktop */ = {
 			isa = PBXGroup;
 			children = (
+				BE23E6B82E50FC9C00C6A9A5 /* ContentView.swift */,
+				BE23E69D2E50FC7300C6A9A5 /* Components */,
+				BE23E69F2E50FC7300C6A9A5 /* Extensions */,
+				BE23E6A12E50FC7300C6A9A5 /* ViewModels */,
+				BE23E6A92E50FC7300C6A9A5 /* Views */,
 				BE476BB82E4F79DE002A4D78 /* JobManager.swift */,
 				BE476BAD2E4E430E002A4D78 /* AnalysisManager.swift */,
-				BE476BAE2E4E430E002A4D78 /* ContentView.swift */,
 				BE476BB02E4E430E002A4D78 /* SwiftUIApp.swift */,
 				BE476B8F2E4CF04F002A4D78 /* Assets.xcassets */,
 				BE476B922E4CF04F002A4D78 /* DesktopAppDelegate.swift */,
@@ -374,11 +448,25 @@
 		BE476B752E4CEDD6002A4D78 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
+				BE23E6AA2E50FC7300C6A9A5 /* JobListView.swift in Sources */,
+				BE23E6AB2E50FC7300C6A9A5 /* ResumeContentView.swift in Sources */,
+				BE23E6AC2E50FC7300C6A9A5 /* ContentViewModel.swift in Sources */,
+				BE23E6AD2E50FC7300C6A9A5 /* PendingResumeView.swift in Sources */,
+				BE23E6AE2E50FC7300C6A9A5 /* RenameDialog.swift in Sources */,
+				BE23E6AF2E50FC7300C6A9A5 /* ResumeListView.swift in Sources */,
+				BE23E6B92E50FC9C00C6A9A5 /* ContentView.swift in Sources */,
+				BE23E6B02E50FC7300C6A9A5 /* GlassButtons.swift in Sources */,
+				BE23E6B12E50FC7300C6A9A5 /* CustomTabPicker.swift in Sources */,
+				BE23E6B22E50FC7300C6A9A5 /* ResumeDetailView.swift in Sources */,
+				BE23E6B32E50FC7300C6A9A5 /* GenericRowView.swift in Sources */,
+				BE23E6B42E50FC7300C6A9A5 /* DateFormatter+Extensions.swift in Sources */,
+				BE23E6B52E50FC7300C6A9A5 /* AnalysisView.swift in Sources */,
+				BE23E6B62E50FC7300C6A9A5 /* VisualEffectView.swift in Sources */,
+				BE23E6B72E50FC7300C6A9A5 /* JobDetailView.swift in Sources */,
 				BE476B9D2E4CF04F002A4D78 /* DesktopAppDelegate.swift in Sources */,
 				BE476BB12E4E430E002A4D78 /* SwiftUIApp.swift in Sources */,
 				BE476BB42E4E430E002A4D78 /* AnalysisManager.swift in Sources */,
 				BE476BB92E4F79DE002A4D78 /* JobManager.swift in Sources */,
-				BE476BB52E4E430E002A4D78 /* ContentView.swift in Sources */,
 				BE476BA52E4CF667002A4D78 /* ResumeManager.swift in Sources */,
 			);
 		};
