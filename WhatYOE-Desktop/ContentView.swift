@@ -29,7 +29,10 @@ struct ContentView: View {
                         JobListView(
                             jobs: viewModel.jobs,
                             selectedJob: $viewModel.selectedJob,
-                            onDelete: viewModel.deleteJob
+                            selectedResumeId: $viewModel.selectedResumeIdForJobs,
+                            resumeOptions: viewModel.resumeOptionsForJobs,
+                            onDelete: viewModel.deleteJob,
+                            onResumeSelectionChanged: viewModel.onResumeSelectionChanged
                         )
                     } else {
                         ResumeListView(
@@ -41,8 +44,8 @@ struct ContentView: View {
                         )
                     }
                 }
-                .frame(width: 250)
-                .padding(.top, 42) // Align with right panel content area (16 + 16 = 32 to account for 12px text padding)
+                .frame(width: 300)
+                .padding(.top, 4) // Align with tab picker on right panel
                 .background(Color.white.opacity(leftListOpacity)) // List background: white 0.5 opacity
                 
                 Divider()
@@ -67,7 +70,7 @@ struct ContentView: View {
                             .opacity(0.8)
                             .padding(.trailing, rightSectionPadding)
                     }
-                    .padding(.top, 8)
+                    .padding(.top, 12)
                     .padding(.bottom, 8)
                     
                     Group {

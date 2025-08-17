@@ -33,6 +33,8 @@
 		BE23E6B62E50FC7300C6A9A5 /* VisualEffectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E69C2E50FC7300C6A9A5 /* VisualEffectView.swift */; };
 		BE23E6B72E50FC7300C6A9A5 /* JobDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6A32E50FC7300C6A9A5 /* JobDetailView.swift */; };
 		BE23E6B92E50FC9C00C6A9A5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6B82E50FC9C00C6A9A5 /* ContentView.swift */; };
+		BE23E6BB2E52127200C6A9A5 /* FileManager+Jobs.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6BA2E52127200C6A9A5 /* FileManager+Jobs.swift */; };
+		BE23E6BD2E5212C500C6A9A5 /* FileManager+Jobs.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE23E6BC2E5212C500C6A9A5 /* FileManager+Jobs.swift */; };
 		BE476B6D2E4BC471002A4D78 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE9CE85A2E4A892F00C8C5D2 /* PDFKit.framework */; };
 		BE476B6E2E4BC195002A4D78 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE476B6F2E4BC195002A4D78 /* main.swift */; };
 		BE476B9A2E4CF04F002A4D78 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = BE476B932E4CF04F002A4D78 /* Info.plist */; };
@@ -108,6 +110,8 @@
 		BE23E6A72E50FC7300C6A9A5 /* ResumeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResumeDetailView.swift; sourceTree = "<group>"; };
 		BE23E6A82E50FC7300C6A9A5 /* ResumeListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResumeListView.swift; sourceTree = "<group>"; };
 		BE23E6B82E50FC9C00C6A9A5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		BE23E6BA2E52127200C6A9A5 /* FileManager+Jobs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FileManager+Jobs.swift"; sourceTree = "<group>"; };
+		BE23E6BC2E5212C500C6A9A5 /* FileManager+Jobs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FileManager+Jobs.swift"; sourceTree = "<group>"; };
 		BE476B6F2E4BC195002A4D78 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		BE476B792E4CEDD6002A4D78 /* WhatYOE-Desktop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "WhatYOE-Desktop.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BE476B8F2E4CF04F002A4D78 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -187,6 +191,7 @@
 		6045B8E3249289520091386F /* WhatYOE */ = {
 			isa = PBXGroup;
 			children = (
+				BE23E6BA2E52127200C6A9A5 /* FileManager+Jobs.swift */,
 				BE23E6932E503DFA00C6A9A5 /* EvaluationStructures.swift */,
 				BE23E6942E503DFA00C6A9A5 /* GuidedEvaluationService.swift */,
 				BE476BBC2E50278C002A4D78 /* GuidedGenerationStructures.swift */,
@@ -283,6 +288,7 @@
 		BE476B992E4CF04F002A4D78 /* WhatYOE-Desktop */ = {
 			isa = PBXGroup;
 			children = (
+				BE23E6BC2E5212C500C6A9A5 /* FileManager+Jobs.swift */,
 				BE23E6B82E50FC9C00C6A9A5 /* ContentView.swift */,
 				BE23E69D2E50FC7300C6A9A5 /* Components */,
 				BE23E69F2E50FC7300C6A9A5 /* Extensions */,
@@ -429,6 +435,7 @@
 		6045B8DD249289520091386F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
+				BE23E6BB2E52127200C6A9A5 /* FileManager+Jobs.swift in Sources */,
 				BE476BBB2E4F8D09002A4D78 /* ScoreCalculator.swift in Sources */,
 				BE476B6E2E4BC195002A4D78 /* main.swift in Sources */,
 				BE476BBD2E50278C002A4D78 /* GuidedGenerationStructures.swift in Sources */,
@@ -448,6 +455,7 @@
 		BE476B752E4CEDD6002A4D78 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
+				BE23E6BD2E5212C500C6A9A5 /* FileManager+Jobs.swift in Sources */,
 				BE23E6AA2E50FC7300C6A9A5 /* JobListView.swift in Sources */,
 				BE23E6AB2E50FC7300C6A9A5 /* ResumeContentView.swift in Sources */,
 				BE23E6AC2E50FC7300C6A9A5 /* ContentViewModel.swift in Sources */,

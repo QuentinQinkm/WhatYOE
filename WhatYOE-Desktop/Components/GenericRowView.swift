@@ -77,7 +77,7 @@ struct GenericRowView<T: ListRowData>: View {
         if isSelected || isHovered {
             return baseColor.opacity(1.0)
         } else {
-            return baseColor.opacity(0.8)
+            return baseColor.opacity(0.6)
         }
     }
     

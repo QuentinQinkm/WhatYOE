@@ -14,6 +14,8 @@ class ContentViewModel: ObservableObject {
     @Published var selectedJob: JobItem?
     @Published var renamingResume: ResumeItem?
     @Published var renameText = ""
+    @Published var selectedResumeIdForJobs: String? = nil
+    @Published var resumeOptionsForJobs: [(id: String, name: String)] = []
     
     // MARK: - Private Properties
     private let resumeManager = ResumeManager.shared
@@ -23,6 +25,7 @@ class ContentViewModel: ObservableObject {
     init() {
         loadResumes()
         loadJobs()
+        loadResumeOptionsForJobs()
         setupNotifications()
     }
     
@@ -43,10 +46,41 @@ class ContentViewModel: ObservableObject {
     }
     
     func loadJobs() {
-        jobs = jobManager.getAllJobs()
+        if let selectedResumeId = selectedResumeIdForJobs {
+            jobs = jobManager.getJobsForResume(resumeId: selectedResumeId)
+            print("🔍 [Desktop] Loading jobs for resume: \(selectedResumeId), found: \(jobs.count)")
+        } else {
+            jobs = jobManager.getAllJobs()
+            print("🔍 [Desktop] Loading all jobs, found: \(jobs.count)")
+        }
+        
         if selectedJob == nil && !jobs.isEmpty {
             selectedJob = jobs.first
         }
+    }
+    
+    func loadResumeOptionsForJobs() {
+        let resumeIds = jobManager.getAllResumeIdsWithJobs()
+        print("🔍 [Desktop] Found resume IDs with jobs: \(resumeIds)")
+        print("🔍 [Desktop] Available resumes: \(resumes.map { $0.id })")
+        
+        resumeOptionsForJobs = resumeIds.compactMap { resumeId in
+            if let resume = resumes.first(where: { $0.id == resumeId }) {
+                print("🔍 [Desktop] Matched resume: \(resumeId) -> \(resume.name)")
+                return (id: resumeId, name: resume.name)
+            } else {
+                print("🔍 [Desktop] No resume found for ID: \(resumeId), using fallback name")
+                return (id: resumeId, name: "Resume \(resumeId.prefix(8))")
+            }
+        }
+        print("🔍 [Desktop] Final resume options: \(resumeOptionsForJobs)")
+    }
+    
+    func onResumeSelectionChanged(_ resumeId: String?) {
+        selectedResumeIdForJobs = resumeId
+        loadJobs()
+        // Reset job selection when changing resume filter
+        selectedJob = jobs.first
     }
     
     // MARK: - Label Text

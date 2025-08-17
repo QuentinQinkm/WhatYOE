@@ -95,59 +95,117 @@ extension JobItem: Codable {}
 
 class JobManager {
     static let shared = JobManager()
-    private let userDefaults = UserDefaults(suiteName: "group.com.kuangming.WhatYOE.shared") ?? UserDefaults.standard
-    private let jobsKey = "savedJobs"
     
     private init() {}
     
     // MARK: - Core Job Management
     
     func getAllJobs() -> [JobItem] {
-        guard let data = userDefaults.data(forKey: jobsKey),
-              let jobs = try? JSONDecoder().decode([JobItem].self, from: data) else {
-            return []
+        var allJobs: [JobItem] = []
+        
+        // Get all resume IDs with jobs
+        let resumeIds = FileManager.getAllResumeIdsWithJobs()
+        
+        for resumeId in resumeIds {
+            let jobIds = FileManager.getJobIds(forResumeId: resumeId)
+            
+            for jobId in jobIds {
+                if let job = loadJob(resumeId: resumeId, jobId: jobId) {
+                    allJobs.append(job)
+                }
+            }
         }
+        
+        return allJobs.sorted { $0.dateAnalyzed > $1.dateAnalyzed }
+    }
+    
+    func getJobsForResume(resumeId: String) -> [JobItem] {
+        var jobs: [JobItem] = []
+        let jobIds = FileManager.getJobIds(forResumeId: resumeId)
+        
+        for jobId in jobIds {
+            if let job = loadJob(resumeId: resumeId, jobId: jobId) {
+                jobs.append(job)
+            }
+        }
+        
         return jobs.sorted { $0.dateAnalyzed > $1.dateAnalyzed }
     }
     
     func saveJob(_ job: JobItem) {
-        var jobs = getAllJobs()
+        print("🔍 [Backend JobManager] Attempting to save job: \(job.jobTitle) with resumeId: \(job.resumeId) and jobId: \(job.jobId)")
         
-        // Remove any existing job with the same jobId
-        jobs.removeAll { $0.jobId == job.jobId }
-        
-        // Add the new job
-        jobs.append(job)
-        
-        // Keep only the latest 100 jobs to prevent storage bloat
-        if jobs.count > 100 {
-            jobs = Array(jobs.sorted { $0.dateAnalyzed > $1.dateAnalyzed }.prefix(100))
+        // Debug: Show the base directory being used
+        if let baseDir = FileManager.getJobsBaseDirectory() {
+            print("🔍 [Backend JobManager] Using base directory: \(baseDir.path)")
+        } else {
+            print("❌ [Backend JobManager] Could not determine base directory")
         }
         
-        // Save to UserDefaults
-        if let data = try? JSONEncoder().encode(jobs) {
-            userDefaults.set(data, forKey: jobsKey)
-            userDefaults.synchronize()
-            os_log(.info, "💼 Job saved: %@ at %@", job.jobTitle, job.company)
+        guard let filePath = FileManager.getJobFilePath(resumeId: job.resumeId, jobId: job.jobId) else {
+            print("❌ [Backend JobManager] Failed to get file path for job: \(job.jobTitle)")
+            os_log(.error, "💼 Failed to get file path for job: %@", job.jobTitle)
+            return
+        }
+        
+        print("🔍 [Backend JobManager] Full file path: \(filePath.path)")
+        print("🔍 [Backend JobManager] Parent directory exists: \(FileManager.default.fileExists(atPath: filePath.deletingLastPathComponent().path))")
+        
+        do {
+            let data = try JSONEncoder().encode(job)
+            try data.write(to: filePath)
+            print("✅ [Backend JobManager] Job saved successfully to: \(filePath.path)")
+            print("🔍 [Backend JobManager] File size: \(data.count) bytes")
+            os_log(.info, "💼 Job saved: %@ at %@ (File: %@)", job.jobTitle, job.company, filePath.lastPathComponent)
+            
+            // Verify file was actually written
+            if FileManager.default.fileExists(atPath: filePath.path) {
+                print("✅ [Backend JobManager] File verification: Job file exists on disk")
+            } else {
+                print("❌ [Backend JobManager] File verification: Job file NOT found on disk")
+            }
             
             // Notify desktop app of job updates
             NotificationCenter.default.post(name: Notification.Name("JobsUpdated"), object: nil)
-        } else {
-            os_log(.error, "💼 Failed to encode and save job: %@", job.jobTitle)
+        } catch {
+            print("❌ [Backend JobManager] Failed to save job: \(job.jobTitle) - Error: \(error)")
+            os_log(.error, "💼 Failed to save job: %@ - Error: %@", job.jobTitle, error.localizedDescription)
         }
     }
     
     func deleteJob(withId jobId: String) {
-        var jobs = getAllJobs()
-        jobs.removeAll { $0.jobId == jobId }
+        // Find the job first to get its resumeId
+        guard let job = getJob(withId: jobId),
+              let filePath = FileManager.getJobFilePath(resumeId: job.resumeId, jobId: jobId) else {
+            os_log(.error, "💼 Failed to find job for deletion: %@", jobId)
+            return
+        }
         
-        if let data = try? JSONEncoder().encode(jobs) {
-            userDefaults.set(data, forKey: jobsKey)
-            userDefaults.synchronize()
+        do {
+            try FileManager.default.removeItem(at: filePath)
             os_log(.info, "💼 Job deleted: %@", jobId)
             
             // Notify desktop app of job updates
             NotificationCenter.default.post(name: Notification.Name("JobsUpdated"), object: nil)
+        } catch {
+            os_log(.error, "💼 Failed to delete job: %@ - Error: %@", jobId, error.localizedDescription)
+        }
+    }
+    
+    // MARK: - Private Helper Methods
+    
+    private func loadJob(resumeId: String, jobId: String) -> JobItem? {
+        guard let filePath = FileManager.getJobFilePath(resumeId: resumeId, jobId: jobId) else {
+            return nil
+        }
+        
+        do {
+            let data = try Data(contentsOf: filePath)
+            let job = try JSONDecoder().decode(JobItem.self, from: data)
+            return job
+        } catch {
+            os_log(.error, "💼 Failed to load job %@/%@: %@", resumeId, jobId, error.localizedDescription)
+            return nil
         }
     }
     
@@ -164,6 +222,12 @@ class JobManager {
                                    resumeId: String,
                                    linkedinJobId: String) -> JobItem {
         
+        print("🔍 [Backend JobManager] createJobFromSafariAnalysis called")
+        print("🔍 [Backend JobManager] Job Title: \(jobTitle)")
+        print("🔍 [Backend JobManager] Company: \(company)")
+        print("🔍 [Backend JobManager] Resume ID: \(resumeId)")
+        print("🔍 [Backend JobManager] LinkedIn Job ID: \(linkedinJobId)")
+        
         // Extract scores from analysis result
         let scores = extractScoresFromAnalysisResult(analysisResult)
         
@@ -178,7 +242,9 @@ class JobManager {
             linkedinJobId: linkedinJobId
         )
         
+        print("🔍 [Backend JobManager] Job created, now calling saveJob...")
         saveJob(job)
+        print("🔍 [Backend JobManager] Job save completed, returning job")
         return job
     }
     
@@ -224,8 +290,8 @@ class JobManager {
     
     // MARK: - Filtering and Search
     
-    func getJobsForResume(resumeId: String) -> [JobItem] {
-        return getAllJobs().filter { $0.resumeId == resumeId }
+    func getAllResumeIdsWithJobs() -> [String] {
+        return FileManager.getAllResumeIdsWithJobs()
     }
     
     func getJobsByCompany(_ company: String) -> [JobItem] {

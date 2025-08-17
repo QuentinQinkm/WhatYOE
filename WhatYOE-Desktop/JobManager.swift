@@ -97,29 +97,68 @@ extension JobItem: Codable {}
 
 class JobManager {
     static let shared = JobManager()
-    private let userDefaults = UserDefaults(suiteName: "group.com.kuangming.WhatYOE.shared") ?? UserDefaults.standard
-    private let jobsKey = "savedJobs"
     
     private init() {}
     
     // MARK: - Read Operations (Desktop UI focuses on viewing)
     
     func getAllJobs() -> [JobItem] {
-        guard let data = userDefaults.data(forKey: jobsKey),
-              let jobs = try? JSONDecoder().decode([JobItem].self, from: data) else {
-            return []
+        var allJobs: [JobItem] = []
+        
+        // Get all resume IDs with jobs
+        let resumeIds = FileManager.getAllResumeIdsWithJobs()
+        
+        for resumeId in resumeIds {
+            let jobIds = FileManager.getJobIds(forResumeId: resumeId)
+            
+            for jobId in jobIds {
+                if let job = loadJob(resumeId: resumeId, jobId: jobId) {
+                    allJobs.append(job)
+                }
+            }
         }
-        return jobs.sorted { $0.dateAnalyzed > $1.dateAnalyzed }
+        
+        return allJobs.sorted { $0.dateAnalyzed > $1.dateAnalyzed }
     }
     
     func getJob(withId jobId: String) -> JobItem? {
         return getAllJobs().first { $0.jobId == jobId }
     }
     
+    func getAllResumeIdsWithJobs() -> [String] {
+        return FileManager.getAllResumeIdsWithJobs()
+    }
+    
+    // MARK: - Private Helper Methods
+    
+    private func loadJob(resumeId: String, jobId: String) -> JobItem? {
+        guard let filePath = FileManager.getJobFilePath(resumeId: resumeId, jobId: jobId) else {
+            return nil
+        }
+        
+        do {
+            let data = try Data(contentsOf: filePath)
+            let job = try JSONDecoder().decode(JobItem.self, from: data)
+            return job
+        } catch {
+            print("❌ Failed to load job \(resumeId)/\(jobId): \(error)")
+            return nil
+        }
+    }
+    
     // MARK: - Filtering and Search (for Desktop UI)
     
     func getJobsForResume(resumeId: String) -> [JobItem] {
-        return getAllJobs().filter { $0.resumeId == resumeId }
+        var jobs: [JobItem] = []
+        let jobIds = FileManager.getJobIds(forResumeId: resumeId)
+        
+        for jobId in jobIds {
+            if let job = loadJob(resumeId: resumeId, jobId: jobId) {
+                jobs.append(job)
+            }
+        }
+        
+        return jobs.sorted { $0.dateAnalyzed > $1.dateAnalyzed }
     }
     
     func getJobsByCompany(_ company: String) -> [JobItem] {
@@ -159,12 +198,18 @@ class JobManager {
     // MARK: - Write Operations (for context menu actions)
     
     func deleteJob(withId jobId: String) {
-        var jobs = getAllJobs()
-        jobs.removeAll { $0.jobId == jobId }
+        // Find the job first to get its resumeId
+        guard let job = getJob(withId: jobId),
+              let filePath = FileManager.getJobFilePath(resumeId: job.resumeId, jobId: jobId) else {
+            print("❌ Failed to find job for deletion: \(jobId)")
+            return
+        }
         
-        if let data = try? JSONEncoder().encode(jobs) {
-            userDefaults.set(data, forKey: jobsKey)
-            userDefaults.synchronize()
+        do {
+            try FileManager.default.removeItem(at: filePath)
+            print("✅ Job deleted: \(jobId)")
+        } catch {
+            print("❌ Failed to delete job: \(jobId) - Error: \(error)")
         }
     }
     
