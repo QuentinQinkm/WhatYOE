@@ -104,9 +104,10 @@ async function startFourCycleAnalysis(data, sendResponse) {
             result: response
         };
         
-        // If we have scores, include them in the response
+        // If we have scores, include them at the top level for content script access
         if (response && response.scores) {
             responseWithScores.scores = response.scores;
+            responseWithScores.aiAnalysis = response.scores.finalScore.toString();
         }
         // Removed fallback to old scores - each job should get fresh results
         

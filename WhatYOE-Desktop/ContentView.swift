@@ -32,7 +32,13 @@ struct ContentView: View {
                             selectedResumeId: $viewModel.selectedResumeIdForJobs,
                             resumeOptions: viewModel.resumeOptionsForJobs,
                             onDelete: viewModel.deleteJob,
-                            onResumeSelectionChanged: viewModel.onResumeSelectionChanged
+                            onResumeSelectionChanged: viewModel.onResumeSelectionChanged,
+                            onRefresh: viewModel.refreshData,
+                            hasNewJobs: viewModel.hasNewJobs,
+                            sortOrder: viewModel.sortOrder,
+                            onSortOrderChanged: viewModel.changeSortOrder,
+                            onJumpToResume: viewModel.jumpToResume,
+                            allResumes: viewModel.resumes
                         )
                     } else {
                         ResumeListView(

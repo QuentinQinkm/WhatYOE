@@ -73,9 +73,18 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                     let characterCount = data["characterCount"] as? Int ?? 0
                     let wordCount = data["wordCount"] as? Int ?? 0
                     let pageText = data["pageText"] as? String ?? ""
+                    let linkedinJobId = data["linkedinJobId"] as? String ?? "unknown"
                     
-                    log("🚀 FOUR_CYCLE_ANALYSIS: Starting single request 4-cycle analysis - \(wordCount) words, \(characterCount) characters")
+                    log("🚀 FOUR_CYCLE_ANALYSIS: Starting analysis for job \(linkedinJobId) - \(wordCount) words, \(characterCount) characters")
                     
+                    // Check if job already exists first
+                    if let existingData = getExistingJobData(jobId: linkedinJobId) {
+                        log("✅ FOUR_CYCLE_ANALYSIS: Found existing data for job \(linkedinJobId)")
+                        sendResponse(existingData, context: context)
+                        return
+                    }
+                    
+                    log("🔄 FOUR_CYCLE_ANALYSIS: Job \(linkedinJobId) not found, proceeding with analysis")
                     analyzeFourCycleJobDescription(pageText: pageText, context: context)
                     return
                 }
@@ -160,6 +169,7 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 }
                 return
             }
+            
             
             // Handle stop analysis command
             if messageContent == "stopAnalysis" {
@@ -593,6 +603,56 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         
         throw NSError(domain: "SafariAnalysis", code: 3, userInfo: [NSLocalizedDescriptionKey: "Timeout waiting for analysis response"])
     }
+    
+    // MARK: - Job Management
+    
+    private func getExistingJobData(jobId: String) -> [String: Any]? {
+        // Get active resume ID
+        guard let activeResumeId = sharedDefaults.string(forKey: "activeResumeId") else {
+            log("⚠️ No active resume ID found")
+            return nil
+        }
+        
+        // Get job file path
+        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.kuangming.WhatYOE.shared") else {
+            log("❌ Could not get app group container")
+            return nil
+        }
+        
+        let jobsDir = containerURL.appendingPathComponent("Jobs")
+        let resumeDir = jobsDir.appendingPathComponent(activeResumeId)
+        let jobFile = resumeDir.appendingPathComponent("\(jobId).json")
+        
+        // Read and parse job file
+        guard let data = try? Data(contentsOf: jobFile),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            log("❌ Could not read job file for \(jobId)")
+            return nil
+        }
+        
+        // Extract scores in the same format as fresh analysis
+        if let analysisScores = json["analysisScores"] as? [String: Any],
+           let finalScore = analysisScores["finalScore"] as? Double {
+            
+            let responseData: [String: Any] = [
+                "aiAnalysis": String(format: "%.1f", finalScore),
+                "rawScore": String(Int(finalScore.rounded())),
+                "status": "success",
+                "scores": [
+                    "fitScores": analysisScores["yearsOfExperienceFit"] as? Double ?? 0,
+                    "gapScores": analysisScores["yearsOfExperienceGap"] as? Double ?? 0,
+                    "finalScore": finalScore
+                ]
+            ]
+            
+            log("✅ Retrieved existing job data for \(jobId): \(finalScore)")
+            return responseData
+        }
+        
+        log("⚠️ Could not extract scores from job file for \(jobId)")
+        return nil
+    }
+    
     
     // MARK: - Resume Management
     private func getCleanedResumeData() -> String {

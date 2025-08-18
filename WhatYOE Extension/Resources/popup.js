@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     async function stopAnalysis() {
         isAnalyzing = false;
-        analyzeButton.textContent = 'Analyze Resume-Job Match';
+        analyzeButton.textContent = 'Start farming!';
         showStatus('Analysis stopped');
         
         try {

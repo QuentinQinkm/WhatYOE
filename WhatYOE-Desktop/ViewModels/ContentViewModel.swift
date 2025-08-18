@@ -3,6 +3,11 @@ import Combine
 import PDFKit
 import UniformTypeIdentifiers
 
+enum JobSortOrder: String, CaseIterable {
+    case time = "Time"
+    case score = "Score"
+}
+
 @MainActor
 class ContentViewModel: ObservableObject {
     // MARK: - Published Properties
@@ -20,17 +25,30 @@ class ContentViewModel: ObservableObject {
     // MARK: - Private Properties
     private let resumeManager = ResumeManager.shared
     private let jobManager = JobManager.shared
+    private var lastJobCount = 0
+    @Published var hasNewJobs = false
+    @Published var sortOrder: JobSortOrder = .time
+    private var resumeNameCache: [String: String] = [:]  // Store resume names persistently
+    private var lastNotificationTimestamp: Double = 0
+    private var notificationTimer: Timer?
     
     // MARK: - Initialization
     init() {
+        loadResumeNameCache()
         loadResumes()
         loadJobs()
         loadResumeOptionsForJobs()
         setupNotifications()
+        startNotificationMonitoring()
+    }
+    
+    deinit {
+        notificationTimer?.invalidate()
     }
     
     // MARK: - Setup
     private func setupNotifications() {
+        // Listen for manual job updates (existing)
         NotificationCenter.default.addObserver(
             forName: Notification.Name("JobsUpdated"),
             object: nil,
@@ -38,11 +56,54 @@ class ContentViewModel: ObservableObject {
         ) { [weak self] _ in
             self?.loadJobs()
         }
+        
+        // Note: Cross-process NotificationCenter doesn't work - using shared UserDefaults monitoring instead
     }
+    
+    private func startNotificationMonitoring() {
+        // Monitor shared UserDefaults for new job notifications every 2 seconds
+        notificationTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.checkForNewJobNotifications()
+            }
+        }
+        print("🔄 [Desktop] Started notification monitoring")
+    }
+    
+    private func checkForNewJobNotifications() {
+        let sharedDefaults = UserDefaults(suiteName: "group.com.kuangming.WhatYOE.shared") ?? UserDefaults.standard
+        
+        guard let notification = sharedDefaults.dictionary(forKey: "newJobNotification"),
+              let jobId = notification["jobId"] as? String,
+              let resumeId = notification["resumeId"] as? String,
+              let timestamp = notification["timestamp"] as? Double else {
+            return
+        }
+        
+        // Only process if this is a new notification
+        if timestamp > lastNotificationTimestamp {
+            lastNotificationTimestamp = timestamp
+            handleNewJobAdded(jobId: jobId, resumeId: resumeId)
+        }
+    }
+    
+    private func handleNewJobAdded(jobId: String, resumeId: String) {
+        print("🔔 [Desktop] New job notification received: \(jobId) for resume: \(resumeId)")
+        
+        // Check if this job affects current view
+        let shouldShowNotification = selectedResumeIdForJobs == nil || selectedResumeIdForJobs == resumeId
+        
+        if shouldShowNotification {
+            hasNewJobs = true
+            print("🔔 [Desktop] Showing green dot - new job affects current view")
+        }
+    }
+    
     
     // MARK: - Data Loading
     func loadResumes() {
         resumes = resumeManager.getAllResumes()
+        updateResumeNameCache()  // Update cache whenever resumes are loaded
     }
     
     func loadJobs() {
@@ -54,22 +115,101 @@ class ContentViewModel: ObservableObject {
             print("🔍 [Desktop] Loading all jobs, found: \(jobs.count)")
         }
         
+        lastJobCount = jobs.count
+        
         if selectedJob == nil && !jobs.isEmpty {
             selectedJob = jobs.first
         }
     }
     
+    // MARK: - Manual Refresh
+    func refreshData() {
+        print("🔄 [Desktop] Manual refresh triggered")
+        loadJobs()
+        loadResumeOptionsForJobs()
+        hasNewJobs = false // Clear the notification dot
+    }
+    
+    // MARK: - Cleanup
+    func removeAllJobsAndCaches() {
+        // Remove all job files
+        jobManager.removeAllJobs()
+        
+        // Clear resume name cache
+        clearResumeNameCache()
+        
+        // Refresh the UI
+        loadJobs()
+        loadResumeOptionsForJobs()
+        
+        print("🧹 [Desktop] Removed all jobs and cleared all caches")
+    }
+    
+    // MARK: - Sorting
+    func changeSortOrder(_ newOrder: JobSortOrder) {
+        sortOrder = newOrder
+        print("🔄 [Desktop] Sort order changed to: \(newOrder.rawValue)")
+    }
+    
+    // MARK: - Navigation
+    func jumpToResume(withId resumeId: String) {
+        // Find the resume and select it
+        if let resume = resumes.first(where: { $0.id == resumeId }) {
+            selectedResume = resume
+            selectedTab = 1 // Switch to Resume tab
+            print("🎯 [Desktop] Jumping to resume: \(resume.name)")
+        }
+    }
+    
+    // MARK: - Resume Name Cache Management
+    private func loadResumeNameCache() {
+        let userDefaults = UserDefaults.standard
+        if let data = userDefaults.data(forKey: "resumeNameCache"),
+           let cache = try? JSONDecoder().decode([String: String].self, from: data) {
+            resumeNameCache = cache
+            print("🔍 [Desktop] Loaded resume name cache: \(resumeNameCache)")
+        }
+    }
+    
+    private func saveResumeNameCache() {
+        let userDefaults = UserDefaults.standard
+        if let data = try? JSONEncoder().encode(resumeNameCache) {
+            userDefaults.set(data, forKey: "resumeNameCache")
+            print("💾 [Desktop] Saved resume name cache")
+        }
+    }
+    
+    private func clearResumeNameCache() {
+        resumeNameCache.removeAll()
+        UserDefaults.standard.removeObject(forKey: "resumeNameCache")
+        print("🧹 [Desktop] Cleared resume name cache")
+    }
+    
+    private func updateResumeNameCache() {
+        for resume in resumes {
+            resumeNameCache[resume.id] = resume.name
+        }
+        saveResumeNameCache()
+    }
+
     func loadResumeOptionsForJobs() {
         let resumeIds = jobManager.getAllResumeIdsWithJobs()
         print("🔍 [Desktop] Found resume IDs with jobs: \(resumeIds)")
-        print("🔍 [Desktop] Available resumes: \(resumes.map { $0.id })")
         
         resumeOptionsForJobs = resumeIds.compactMap { resumeId in
+            // First try to find in current resumes
             if let resume = resumes.first(where: { $0.id == resumeId }) {
                 print("🔍 [Desktop] Matched resume: \(resumeId) -> \(resume.name)")
                 return (id: resumeId, name: resume.name)
-            } else {
-                print("🔍 [Desktop] No resume found for ID: \(resumeId), using fallback name")
+            }
+            // Then try cached name for deleted resumes
+            else if let cachedName = resumeNameCache[resumeId] {
+                print("🔍 [Desktop] Using cached name for deleted resume: \(resumeId) -> \(cachedName)")
+                return (id: resumeId, name: "\(cachedName) (deleted)")
+            }
+            // Fallback to ID
+            else {
+                print("🔍 [Desktop] No name found for ID: \(resumeId), using fallback")
                 return (id: resumeId, name: "Resume \(resumeId.prefix(8))")
             }
         }

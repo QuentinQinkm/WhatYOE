@@ -287,6 +287,7 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
         }
 
 
+
         async startAnalysis() {
             if (this.isAnalyzing) {
                 console.log('⚠️ [YOE AI] Analysis already in progress');
@@ -320,6 +321,8 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
             // Continuous loop to scroll, find new cards, and process them
             while (stableScrolls < maxStableScrolls && this.isAnalyzing) {
                 const cardsOnPage = this.getJobCards();
+                
+                // Filter out cards that have already been processed in this session
                 const newCards = cardsOnPage.filter(card => {
                     const jobId = this.getCardId(card);
                     return jobId && !this.analysisResults.has(jobId) && !processedInThisRun.has(jobId);

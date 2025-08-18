@@ -150,7 +150,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Always set up status bar and start monitoring
         setupStatusBar()
-        requestNotificationPermissions()
         startSafariAnalysisMonitoring()
         
         print("✅ Background service setup complete")
@@ -683,7 +682,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                let request = try? JSONDecoder().decode(ResumeCleaningRequest.self, from: requestData),
                sharedDefaults.string(forKey: "resumeCleaningStatus") == "pending" {
                 
-                print("🧹 Processing resume cleaning request: \(request.id)")
+                print("🧹 Found pending resume cleaning request: \(request.id)")
                 await processResumeCleaningRequest()
             }
             
@@ -789,6 +788,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             )
             
             print("💼 Job saved with ID: \(savedJob.jobId)")
+            
+            // Notify desktop app of new job via shared storage
+            let newJobNotification = [
+                "jobId": savedJob.jobId,
+                "resumeId": activeResumeId,
+                "timestamp": Date().timeIntervalSince1970
+            ] as [String : Any]
+            sharedDefaults.set(newJobNotification, forKey: "newJobNotification")
+            print("🔔 [Backend] Signaled new job to desktop app: \(savedJob.jobId)")
             
             // Prepare scores for response
             let fitScores = [

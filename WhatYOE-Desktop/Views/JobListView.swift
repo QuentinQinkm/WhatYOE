@@ -1,5 +1,10 @@
 import SwiftUI
 
+// Import the sort order enum
+extension JobSortOrder: Identifiable {
+    var id: String { rawValue }
+}
+
 // MARK: - Job Group Structure
 private struct JobGroup {
     let category: String
@@ -15,11 +20,36 @@ struct JobListView: View {
     let resumeOptions: [(id: String, name: String)]
     let onDelete: (JobItem) -> Void
     let onResumeSelectionChanged: (String?) -> Void
+    let onRefresh: (() -> Void)?
+    let hasNewJobs: Bool
+    let sortOrder: JobSortOrder
+    let onSortOrderChanged: (JobSortOrder) -> Void
+    let onJumpToResume: (String) -> Void
+    let allResumes: [ResumeItem]
     
     // State for collapsible sections
     @State private var collapsedSections: Set<String> = []
+    @State private var sortIconHovered = false
+    @State private var refreshIconHovered = false
+    @State private var jumpIconHovered = false
     
     // MARK: - Computed Properties
+    private var shouldShowJumpIcon: Bool {
+        selectedResumeId != nil
+    }
+    
+    private var resumeExists: Bool {
+        guard let selectedId = selectedResumeId else { return false }
+        return allResumes.contains { $0.id == selectedId }
+    }
+    
+    private var jumpIconOpacity: Double {
+        guard shouldShowJumpIcon else { return 0 }
+        if !resumeExists { return 0.3 }
+        return jumpIconHovered ? 0.7 : 0.5
+    }
+    
+    
     private var groupedJobs: [JobGroup] {
         let grouped = Dictionary(grouping: jobs) { job in
             AppColors.categoryForScore(job.analysisScores.finalScore)
@@ -36,10 +66,18 @@ struct JobListView: View {
             .filter { !$0.jobs.isEmpty }
             .sorted { $0.sortOrder < $1.sortOrder }
             .map { group in
-                JobGroup(
+                let sortedJobs: [JobItem]
+                switch sortOrder {
+                case .time:
+                    sortedJobs = group.jobs.sorted { $0.dateAnalyzed > $1.dateAnalyzed }
+                case .score:
+                    sortedJobs = group.jobs.sorted { $0.analysisScores.finalScore > $1.analysisScores.finalScore }
+                }
+                
+                return JobGroup(
                     category: group.category,
                     color: group.color,
-                    jobs: group.jobs.sorted { $0.analysisScores.finalScore > $1.analysisScores.finalScore },
+                    jobs: sortedJobs,
                     sortOrder: group.sortOrder
                 )
             }
@@ -63,7 +101,71 @@ struct JobListView: View {
                 .font(.system(size: 12, weight: .light))
                 .background(.regularMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: .infinity, style: .continuous))
+                
+                // Jump to resume icon
+                if shouldShowJumpIcon {
+                    Button(action: {
+                        if resumeExists, let selectedId = selectedResumeId {
+                            onJumpToResume(selectedId)
+                        }
+                    }) {
+                        Image(systemName: "arrow.right.circle")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.black)
+                            .opacity(jumpIconOpacity)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!resumeExists)
+                    .onHover { isHovered in
+                        jumpIconHovered = isHovered
+                    }
+                }
+                
                 Spacer()
+                
+                // Sort dropdown
+                Menu {
+                    ForEach(JobSortOrder.allCases, id: \.self) { order in
+                        Button(order.rawValue) {
+                            onSortOrderChanged(order)
+                        }
+                    }
+                } label: {
+                    Image(systemName: "arrow.up.arrow.down")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.black)
+                        .opacity(sortIconHovered ? 0.7 : 0.5)
+                }
+                .buttonStyle(.plain)
+                .help("Sort jobs by \(sortOrder.rawValue.lowercased())")
+                .onHover { isHovered in
+                    sortIconHovered = isHovered
+                }
+                
+                // Refresh button with notification dot
+                if let onRefresh = onRefresh {
+                    ZStack {
+                        Button(action: onRefresh) {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.black)
+                                .opacity(refreshIconHovered ? 0.7 : 0.5)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Refresh job list")
+                        .onHover { isHovered in
+                            refreshIconHovered = isHovered
+                        }
+                        
+                        // Green notification dot
+                        if hasNewJobs {
+                            Circle()
+                                .fill(.green)
+                                .frame(width: 8, height: 8)
+                                .offset(x: 8, y: -8)
+                        }
+                    }
+                }
             }
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 12)

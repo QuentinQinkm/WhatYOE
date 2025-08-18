@@ -213,6 +213,39 @@ class JobManager {
         }
     }
     
+    func removeAllJobs() {
+        let resumeIds = FileManager.getAllResumeIdsWithJobs()
+        var deletedCount = 0
+        var errorCount = 0
+        
+        for resumeId in resumeIds {
+            let jobIds = FileManager.getJobIds(forResumeId: resumeId)
+            
+            for jobId in jobIds {
+                guard let filePath = FileManager.getJobFilePath(resumeId: resumeId, jobId: jobId) else {
+                    errorCount += 1
+                    continue
+                }
+                
+                do {
+                    try FileManager.default.removeItem(at: filePath)
+                    deletedCount += 1
+                } catch {
+                    print("❌ Failed to delete job \(resumeId)/\(jobId): \(error)")
+                    errorCount += 1
+                }
+            }
+            
+            // Clean up empty resume directories
+            if let resumeDir = FileManager.getResumeJobsDirectory(resumeId: resumeId),
+               (try? FileManager.default.contentsOfDirectory(atPath: resumeDir.path))?.isEmpty == true {
+                try? FileManager.default.removeItem(at: resumeDir)
+            }
+        }
+        
+        print("✅ Removed \(deletedCount) jobs with \(errorCount) errors")
+    }
+    
     // MARK: - Utility Methods
     
     func refreshJobList() {
