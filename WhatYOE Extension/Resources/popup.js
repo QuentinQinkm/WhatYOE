@@ -177,13 +177,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             } else {
                 showStatus('Failed to start analysis, try to refresh the page', true);
                 isAnalyzing = false;
-                analyzeButton.textContent = 'Analyze Resume-Job Match';
+                analyzeButton.textContent = 'Start farming!';
             }
         } catch (error) {
             console.error('Analysis error:', error);
             showStatus('Error - Please refresh the page', true);
             isAnalyzing = false;
-            analyzeButton.textContent = 'Analyze Resume-Job Match';
+            analyzeButton.textContent = 'Start farming!';
         }
     }
     
@@ -349,7 +349,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (isAnalyzing) {
             analyzeButton.textContent = 'Stop Analysis';
         } else {
-            analyzeButton.textContent = 'Analyze Resume-Job Match';
+            analyzeButton.textContent = 'Start farming!';
         }
     }
     

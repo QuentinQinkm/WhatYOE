@@ -180,9 +180,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Set status bar icon
         if let button = statusItem.button {
-            button.title = "📊"
-            button.font = NSFont.systemFont(ofSize: 16)
-            button.toolTip = "WhatYOE Background Service"
+            button.image = NSImage(named: "StatusBarIcon")
+            //button.font = NSFont.systemFont(ofSize: 16)
+            //button.toolTip = "WhatYOE Background Service"
             button.action = #selector(statusBarClicked)
             button.target = self
         }
