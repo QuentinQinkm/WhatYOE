@@ -108,9 +108,9 @@ struct GlassIconButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: config.fontSize, weight: .light))
+                .font(.system(size: config.fontSize, weight: .bold))
                 .foregroundColor(GlassButtonStyle.textColor(for: state, baseColor: color, isPressed: isPressed))
-                .padding(config.padding)
+                .frame(width: 40, height: 40)
                 .background {
                     ZStack {
                         RoundedRectangle(cornerRadius: config.cornerRadius, style: .continuous)
@@ -123,6 +123,50 @@ struct GlassIconButton: View {
                 }
                 .clipShape(RoundedRectangle(cornerRadius: config.cornerRadius, style: .continuous))
                 .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 0)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(state == .disabled)
+        .scaleEffect(isPressed ? 0.95 : 1.0)
+        .onLongPressGesture(minimumDuration: 0, pressing: { pressing in
+            withAnimation(.easeInOut(duration: 0.1)) {
+                isPressed = pressing
+            }
+        }, perform: {})
+    }
+}
+
+struct GlassIconTextButton: View {
+    let icon: String
+    let title: String
+    let color: Color
+    let state: ButtonState
+    let action: () -> Void
+    @State private var isPressed = false
+    
+    private let config = GlassButtonConfig.textButton
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: config.fontSize, weight: .bold))
+                Text(title)
+                    .font(.system(size: config.fontSize, weight: .light))
+            }
+            .foregroundColor(GlassButtonStyle.textColor(for: state, baseColor: color, isPressed: isPressed))
+            .padding(config.padding)
+            .background {
+                ZStack {
+                    RoundedRectangle(cornerRadius: config.cornerRadius, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                    
+                    RoundedRectangle(cornerRadius: config.cornerRadius, style: .continuous)
+                        .fill(GlassButtonStyle.backgroundFill(for: state, baseColor: color, isPressed: isPressed))
+                        .blendMode(.screen)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: config.cornerRadius, style: .continuous))
+            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 0)
         }
         .buttonStyle(PlainButtonStyle())
         .disabled(state == .disabled)

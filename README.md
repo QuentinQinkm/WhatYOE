@@ -3,6 +3,13 @@
 A macOS application that analyzes how well a resume matches a job description using Apple's Foundation Models AI.
 
 ## ⚠️ Current Status - Development Version
+-----Aug 18------
+UI improvements and button standardization:
+- **Safari Extension Popup Redesign**: Complete restructuring with proper component ordering, full-width buttons, and improved styling
+- **Desktop App Button Layout**: Added LinkedIn and star buttons to job analysis section with proper overlay positioning
+- **Fixed Button Sizing**: Standardized all glass icon buttons to 40x40px fixed size for visual consistency
+- **Button Position Corrections**: Aligned edit button placement to match star button positioning across views
+
 -----Aug 17------
 Major UI/UX improvements and file-based job storage:
 - **Collapsible Job Sections**: Jobs now grouped by rating (Good/Maybe/Poor/Rejected) with color-coded headers

@@ -38,6 +38,8 @@ struct PendingResumeView: View {
                         }
                         .padding(.bottom, 16)
                         
+                        Spacer()
+                        
                         HStack {
                             GlassButton(
                                 title: "Cancel",
