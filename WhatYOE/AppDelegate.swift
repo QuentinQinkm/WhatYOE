@@ -744,6 +744,54 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let sharedDefaults = UserDefaults(suiteName: "group.com.kuangming.WhatYOE.shared") ?? UserDefaults.standard
         
         do {
+            // Get job details for existence check
+            let linkedinJobId = sharedDefaults.string(forKey: "currentLinkedInJobId") ?? "unknown"
+            let activeResumeId = ResumeManager.shared.getActiveResumeId() ?? "unknown"
+            
+            // Check if job already exists first
+            if let existingJob = JobManager.shared.getJobByLinkedInId(linkedinJobId, resumeId: activeResumeId) {
+                print("✅ Job \(linkedinJobId) already exists for resume \(activeResumeId) - returning existing data")
+                
+                // Build response from existing job data - same format as fresh analysis
+                let fitScores = [
+                    existingJob.analysisScores.yearsOfExperienceFit,
+                    existingJob.analysisScores.educationFit,
+                    existingJob.analysisScores.technicalSkillsFit,
+                    existingJob.analysisScores.relevantExperienceFit
+                ].filter { $0 > 0.0 }
+                
+                let gapScores = [
+                    existingJob.analysisScores.yearsOfExperienceGap,
+                    existingJob.analysisScores.educationGap,
+                    existingJob.analysisScores.technicalSkillsGap,
+                    existingJob.analysisScores.relevantExperienceGap
+                ].filter { $0 > 0.0 }
+                
+                let analysisScores = AnalysisScores(
+                    fitScores: fitScores,
+                    gapScores: gapScores,
+                    finalScore: existingJob.analysisScores.finalScore
+                )
+                
+                let response = SafariAnalysisResponse(
+                    requestId: request.id,
+                    results: String(format: "%.6f", existingJob.analysisScores.finalScore),
+                    error: nil,
+                    timestamp: Date(),
+                    scores: analysisScores
+                )
+                
+                // Store response for Safari extension to pick up
+                let responseData = try JSONEncoder().encode(response)
+                sharedDefaults.set(responseData, forKey: "safariAnalysisResponse")
+                sharedDefaults.set("completed", forKey: "safariAnalysisStatus")
+                
+                print("📤 Sent existing job data to Safari extension")
+                return
+            }
+            
+            print("🔄 Job \(linkedinJobId) not found - proceeding with fresh analysis")
+            
             // Check which analysis method to use
             let analysisMethod = sharedDefaults.string(forKey: "analysisMethod") ?? "fourRun"
             let analysisType = sharedDefaults.string(forKey: "safariAnalysisType") ?? "standard"
@@ -773,10 +821,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             
             // Save the job analysis result
-            let activeResumeId = ResumeManager.shared.getActiveResumeId() ?? "unknown"
             let jobTitle = request.jobTitle ?? "Unknown Position"
             let company = request.company ?? "Unknown Company"
-            let linkedinJobId = sharedDefaults.string(forKey: "currentLinkedInJobId") ?? "unknown"
             
             let savedJob = JobManager.shared.createJobFromSafariAnalysis(
                 jobTitle: jobTitle,

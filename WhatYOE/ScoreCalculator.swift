@@ -9,8 +9,8 @@ import Foundation
 
 struct ScoreCalculator {
     // MARK: - Configuration
-    static let fitMultiplier: Double = 1.2    // Give more weight to fit scores
-    static let gapMultiplier: Double = 0.95   // Slightly reduce gap score impact
+    static let fitMultiplier: Double = 1.8   // Give more weight to fit scores
+    static let gapMultiplier: Double = 0.5   // Slightly reduce gap score impact
     
     // MARK: - Score Calculation
     static func calculateFinalScore(fitScores: [Double], gapScores: [Double]) -> Double {

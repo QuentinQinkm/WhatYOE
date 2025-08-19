@@ -312,13 +312,42 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
         }
         
         async analyzeAllJobsSequentially() {
-            console.log(`🚀 [YOE AI] Starting continuous analysis loop`);
+            console.log(`🚀 [YOE AI] Starting continuous analysis loop with pagination`);
             
             let processedInThisRun = new Set();
+            let currentPageProcessed = false;
+
+            // Main pagination loop - continue until no more pages
+            while (this.isAnalyzing) {
+                currentPageProcessed = await this.analyzeCurrentPage(processedInThisRun);
+                
+                if (!currentPageProcessed) {
+                    // Try to go to next page
+                    const nextPageClicked = await this.tryClickNextPage();
+                    
+                    if (!nextPageClicked) {
+                        console.log(`✅ [YOE AI] No more pages available. Analysis complete.`);
+                        break;
+                    }
+                    
+                    // Wait for new page to load
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    console.log(`📄 [YOE AI] Moved to next page, continuing analysis...`);
+                } else {
+                    // Page had jobs to process, continue with current page
+                    continue;
+                }
+            }
+            
+            console.log(`✅ [YOE AI] Analysis loop complete. Total jobs analyzed: ${this.analysisResults.size}`);
+        }
+
+        async analyzeCurrentPage(processedInThisRun) {
             let stableScrolls = 0;
             let maxStableScrolls = 3; // Stop after 3 scrolls with no new jobs
+            let foundJobsOnPage = false;
 
-            // Continuous loop to scroll, find new cards, and process them
+            // Scroll and process jobs on current page
             while (stableScrolls < maxStableScrolls && this.isAnalyzing) {
                 const cardsOnPage = this.getJobCards();
                 
@@ -329,8 +358,9 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
                 });
 
                 if (newCards.length > 0) {
-                    console.log(`📊 [YOE AI] Found ${newCards.length} new jobs to process.`);
+                    console.log(`📊 [YOE AI] Found ${newCards.length} new jobs to process on current page.`);
                     stableScrolls = 0; // Reset stable count because we found new work to do
+                    foundJobsOnPage = true;
 
                     for (const card of newCards) {
                         if (!this.isAnalyzing) break; // Check if analysis was stopped
@@ -431,18 +461,83 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
                     stableScrolls++;
                 }
                 
-                // Scroll down to check for more jobs
-                if (this.isAnalyzing) {
-                    console.log(`📜 [YOE AI] Scrolling down to find more jobs...`);
+                // Scroll down to check for more jobs on current page
+                if (this.isAnalyzing && stableScrolls < maxStableScrolls) {
+                    console.log(`📜 [YOE AI] Scrolling down to find more jobs on current page...`);
                     window.scrollTo(0, document.body.scrollHeight);
                     await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for scroll to complete
                 }
             }
             
-            console.log(`✅ [YOE AI] Analysis loop complete. Total jobs analyzed: ${this.analysisResults.size}`);
+            console.log(`📄 [YOE AI] Current page analysis complete. Found jobs: ${foundJobsOnPage}`);
+            return foundJobsOnPage;
+        }
+
+        async tryClickNextPage() {
+            console.log(`🔍 [YOE AI] Looking for next page button...`);
+            
+            // Common selectors for LinkedIn next page buttons
+            const nextPageSelectors = [
+                'button[aria-label="Next"]',
+                'button[aria-label="View next results"]', 
+                '.artdeco-pagination__button--next:not([disabled])',
+                '.artdeco-pagination__button--next:not(.artdeco-pagination__button--disabled)',
+                'button.artdeco-pagination__button--next',
+                '[data-test-pagination-page-btn="next"]:not([disabled])',
+                '.jobs-search-pagination__button--next:not([disabled])',
+                'a[aria-label="Next"]',
+                'button:contains("Next")',
+                '.pv1 button[aria-label*="next" i]'
+            ];
+            
+            for (const selector of nextPageSelectors) {
+                const nextButton = document.querySelector(selector);
+                
+                if (nextButton && !nextButton.disabled && !nextButton.classList.contains('disabled')) {
+                    // Check if button is visible and clickable
+                    const rect = nextButton.getBoundingClientRect();
+                    const isVisible = rect.width > 0 && rect.height > 0;
+                    
+                    if (isVisible) {
+                        console.log(`🖱️ [YOE AI] Found clickable next page button with selector: ${selector}`);
+                        
+                        // Scroll to button and click
+                        nextButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        
+                        nextButton.click();
+                        console.log(`✅ [YOE AI] Clicked next page button successfully`);
+                        return true;
+                    }
+                }
+            }
+            
+            // Fallback: Try to find numbered pagination buttons
+            const paginationNumbers = document.querySelectorAll('.artdeco-pagination__pages button, .jobs-search-pagination button');
+            
+            for (const button of paginationNumbers) {
+                if (button.getAttribute('aria-current') === 'true' || button.classList.contains('selected')) {
+                    // Found current page, look for next number
+                    const nextSibling = button.nextElementSibling;
+                    if (nextSibling && nextSibling.tagName === 'BUTTON' && !nextSibling.disabled) {
+                        console.log(`🖱️ [YOE AI] Found next page number button`);
+                        
+                        nextSibling.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        
+                        nextSibling.click();
+                        console.log(`✅ [YOE AI] Clicked next page number successfully`);
+                        return true;
+                    }
+                    break;
+                }
+            }
+            
+            console.log(`❌ [YOE AI] No clickable next page button found`);
+            return false;
         }
         
-        // Removed pagination methods - using continuous scrolling instead
+        // Auto-pagination: analyzes current page completely, then moves to next page automatically
         
         stopAnalysis() {
             console.log('🛑 [YOE AI] Stopping analysis...');

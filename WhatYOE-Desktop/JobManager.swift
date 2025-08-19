@@ -252,4 +252,11 @@ class JobManager {
         // Trigger a refresh of the job list for UI updates
         // This could notify observers or reload data
     }
+    
+    // MARK: - Job Lookup by LinkedIn ID
+    func getJobByLinkedInId(_ linkedinJobId: String, resumeId: String) -> JobItem? {
+        // Check if job exists for specific resume
+        let resumeJobs = getJobsForResume(resumeId: resumeId)
+        return resumeJobs.first { $0.jobId == linkedinJobId }
+    }
 }

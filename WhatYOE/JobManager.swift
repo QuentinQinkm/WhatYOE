@@ -327,4 +327,11 @@ class JobManager {
         
         return (totalJobs: totalJobs, averageScore: averageScore, topCompanies: topCompanies)
     }
+    
+    // MARK: - Job Lookup by LinkedIn ID
+    func getJobByLinkedInId(_ linkedinJobId: String, resumeId: String) -> JobItem? {
+        // Check if job exists for specific resume
+        let resumeJobs = getJobsForResume(resumeId: resumeId)
+        return resumeJobs.first { $0.jobId == linkedinJobId }
+    }
 }

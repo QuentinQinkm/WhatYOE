@@ -76,60 +76,13 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                     let linkedinJobId = data["linkedinJobId"] as? String ?? "unknown"
                     
                     log("🚀 FOUR_CYCLE_ANALYSIS: Starting analysis for job \(linkedinJobId) - \(wordCount) words, \(characterCount) characters")
-                    
-                    // Check if job already exists first
-                    if let existingData = getExistingJobData(jobId: linkedinJobId) {
-                        log("✅ FOUR_CYCLE_ANALYSIS: Found existing data for job \(linkedinJobId)")
-                        sendResponse(existingData, context: context)
-                        return
-                    }
-                    
-                    log("🔄 FOUR_CYCLE_ANALYSIS: Job \(linkedinJobId) not found, proceeding with analysis")
+                    log("🔄 FOUR_CYCLE_ANALYSIS: Forwarding to backend for existence check and analysis")
                     analyzeFourCycleJobDescription(pageText: pageText, context: context)
                     return
                 }
             }
             
-            // Handle sequential phase analysis
-            if messageContent == "phase1Analysis" {
-                if let data = messageDict["data"] as? [String: Any] {
-                    let pageText = data["pageText"] as? String ?? ""
-                    log("🚀 PHASE1: Starting YOE Analysis")
-                    setProgress(stage: "round_1", message: "Phase 1: YOE Analysis")
-                    analyzeJobDescriptionPhase1(pageText: pageText, context: context)
-                    return
-                }
-            }
-            
-            if messageContent == "phase2Analysis" {
-                if let data = messageDict["data"] as? [String: Any] {
-                    let pageText = data["pageText"] as? String ?? ""
-                    log("🚀 PHASE2: Starting Education Analysis")
-                    setProgress(stage: "round_2", message: "Phase 2: Education Analysis")
-                    analyzeJobDescriptionPhase2(pageText: pageText, context: context)
-                    return
-                }
-            }
-            
-            if messageContent == "phase3Analysis" {
-                if let data = messageDict["data"] as? [String: Any] {
-                    let pageText = data["pageText"] as? String ?? ""
-                    log("🚀 PHASE3: Starting Skills Analysis")
-                    setProgress(stage: "round_3", message: "Phase 3: Skills Analysis")
-                    analyzeJobDescriptionPhase3(pageText: pageText, context: context)
-                    return
-                }
-            }
-            
-            if messageContent == "phase4Analysis" {
-                if let data = messageDict["data"] as? [String: Any] {
-                    let pageText = data["pageText"] as? String ?? ""
-                    log("🚀 PHASE4: Starting Experience Analysis")
-                    setProgress(stage: "round_4", message: "Phase 4: Experience Analysis")
-                    analyzeJobDescriptionPhase4(pageText: pageText, context: context)
-                    return
-                }
-            }
+            // Legacy sequential phase handlers removed - now using unified fourCycleAnalysis
             
             // Handle resume management (needed for popup functionality)
             if messageContent == "getAvailableResumes" {
@@ -342,150 +295,7 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     }
     
     
-    // MARK: - Phase Analysis Functions
-    private func analyzeJobDescriptionPhase1(pageText: String, context: NSExtensionContext) {
-        Task {
-            do {
-                let resumeData = getCleanedResumeData()
-                let analysisMethod = getAnalysisMethodFromSharedDefaults()
-                
-                log("🔄 Phase 1: Starting YOE Analysis using \(analysisMethod) method...")
-                
-                // Clear old scores to prevent contamination from previous job analysis
-                sharedDefaults.removeObject(forKey: "lastAnalysisScores")
-                sharedDefaults.removeObject(forKey: "safariAnalysisResponse")
-                log("🧹 Cleared old scores and response data to prevent contamination")
-                
-                // Send request to WhatYOE - let it handle all prompt logic
-                let results = try await requestAnalysisFromWhatYOE(
-                    resumeText: resumeData,
-                    jobDescription: pageText,
-                    phase: "phase1"
-                )
-                
-                // Extract YOE score from results (0-3 scale)
-                let score = extractPhaseScore(from: results, phase: "YOE")
-                
-                log("✅ Phase 1 complete: \(score)")
-                setProgress(stage: "round_1", message: "Phase 1 Complete: \(score)")
-                
-                // Send response for Phase 1
-                sendPhaseResponse(phase: "phase1", score: score, rawScore: score, context: context)
-                
-            } catch {
-                log("❌ Phase 1 failed: \(error)")
-                sendPhaseResponse(phase: "phase1", score: "0", rawScore: "0", context: context)
-            }
-        }
-    }
-    
-    private func analyzeJobDescriptionPhase2(pageText: String, context: NSExtensionContext) {
-        Task {
-            do {
-                let resumeData = getCleanedResumeData()
-                let analysisMethod = getAnalysisMethodFromSharedDefaults()
-                
-                log("🔄 Phase 2: Starting Education Analysis using \(analysisMethod) method...")
-                
-                // Clear old scores to prevent contamination from previous job analysis
-                sharedDefaults.removeObject(forKey: "lastAnalysisScores")
-                sharedDefaults.removeObject(forKey: "safariAnalysisResponse")
-                log("🧹 Cleared old scores and response data to prevent contamination")
-                
-                // Send request to WhatYOE - let it handle all prompt logic
-                let results = try await requestAnalysisFromWhatYOE(
-                    resumeText: resumeData,
-                    jobDescription: pageText,
-                    phase: "phase2"
-                )
-                
-                // Extract Education score from results (0-3 scale)
-                let score = extractPhaseScore(from: results, phase: "Education")
-                
-                log("✅ Phase 2 complete: \(score)")
-                setProgress(stage: "round_2", message: "Phase 2 Complete: \(score)")
-                
-                // Send response for Phase 2
-                sendPhaseResponse(phase: "phase2", score: score, rawScore: score, context: context)
-                
-            } catch {
-                log("❌ Phase 2 failed: \(error)")
-                sendPhaseResponse(phase: "phase2", score: "0", rawScore: "0", context: context)
-            }
-        }
-    }
-    
-    private func analyzeJobDescriptionPhase3(pageText: String, context: NSExtensionContext) {
-        Task {
-            do {
-                let resumeData = getCleanedResumeData()
-                let analysisMethod = getAnalysisMethodFromSharedDefaults()
-                
-                log("🔄 Phase 3: Starting Skills Analysis using \(analysisMethod) method...")
-                
-                // Clear old scores to prevent contamination from previous job analysis
-                sharedDefaults.removeObject(forKey: "lastAnalysisScores")
-                sharedDefaults.removeObject(forKey: "safariAnalysisResponse")
-                log("🧹 Cleared old scores and response data to prevent contamination")
-                
-                // Send request to WhatYOE - let it handle all prompt logic
-                let results = try await requestAnalysisFromWhatYOE(
-                    resumeText: resumeData,
-                    jobDescription: pageText,
-                    phase: "phase3"
-                )
-                
-                // Extract Skills score from results (0-3 scale)
-                let score = extractPhaseScore(from: results, phase: "Skills")
-                
-                log("✅ Phase 3 complete: \(score)")
-                setProgress(stage: "round_3", message: "Phase 3 Complete: \(score)")
-                
-                // Send response for Phase 3
-                sendPhaseResponse(phase: "phase3", score: score, rawScore: score, context: context)
-                
-            } catch {
-                log("❌ Phase 3 failed: \(error)")
-                sendPhaseResponse(phase: "phase3", score: "0", rawScore: "0", context: context)
-            }
-        }
-    }
-    
-    private func analyzeJobDescriptionPhase4(pageText: String, context: NSExtensionContext) {
-        Task {
-            do {
-                let resumeData = getCleanedResumeData()
-                let analysisMethod = getAnalysisMethodFromSharedDefaults()
-                
-                log("🔄 Phase 4: Starting Experience Analysis using \(analysisMethod) method...")
-                
-                // Clear old scores to prevent contamination from previous job analysis
-                sharedDefaults.removeObject(forKey: "lastAnalysisScores")
-                sharedDefaults.removeObject(forKey: "safariAnalysisResponse")
-                log("🧹 Cleared old scores and response data to prevent contamination")
-                
-                // Send request to WhatYOE - let it handle all prompt logic
-                let results = try await requestAnalysisFromWhatYOE(
-                    resumeText: resumeData,
-                    jobDescription: pageText,
-                    phase: "phase4"
-                )
-                
-                // Extract Experience score from results (0-3 scale)
-                let score = extractPhaseScore(from: results, phase: "Experience")
-                
-                log("✅ Phase 4 complete: \(score)")
-                setProgress(stage: "round_4", message: "Phase 4 Complete: \(score)")
-                
-                // Send response for Phase 4
-                sendPhaseResponse(phase: "phase4", score: score, rawScore: score, context: context)
-                
-            } catch {
-                log("❌ Phase 4 failed: \(error)")
-                sendPhaseResponse(phase: "phase4", score: "0", rawScore: "0", context: context)
-            }
-        }
-    }
+    // Legacy phase analysis functions removed - now using unified fourCycleAnalysis
     
     
     private func requestFourCycleAnalysisFromBackgroundServer(resumeText: String, jobDescription: String, jobTitle: String, company: String, pageUrl: String) async throws -> String {
@@ -522,56 +332,7 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         return sharedDefaults.string(forKey: "analysisMethod") ?? "fourRun"
     }
     
-    private func requestAnalysisFromWhatYOE(resumeText: String, jobDescription: String, phase: String) async throws -> String {
-        // Extract job metadata for phase analysis too
-        let jobTitle = sharedDefaults.string(forKey: "currentJobTitle") ?? extractJobTitleFromPageText(jobDescription)
-        let company = sharedDefaults.string(forKey: "currentCompany") ?? extractCompanyFromPageText(jobDescription)
-        let pageUrl = sharedDefaults.string(forKey: "currentPageUrl") ?? "unknown"
-        
-        // Create analysis request with job metadata
-        let request = SafariAnalysisRequest(
-            id: UUID().uuidString,
-            resumeText: resumeText,
-            jobDescription: jobDescription,
-            jobTitle: jobTitle,
-            company: company,
-            pageUrl: pageUrl,
-            timestamp: Date()
-        )
-        
-        // Clear old scores and response data to prevent contamination
-        sharedDefaults.removeObject(forKey: "lastAnalysisScores")
-        sharedDefaults.removeObject(forKey: "safariAnalysisResponse")
-        log("🧹 Cleared old scores and response data before starting new phase analysis")
-        
-        // Store request in shared defaults
-        if let requestData = try? JSONEncoder().encode(request) {
-            sharedDefaults.set(requestData, forKey: "safariAnalysisRequest")
-            sharedDefaults.set("pending", forKey: "safariAnalysisStatus")
-        }
-        
-        // Wait for response with timeout
-        return try await waitForAnalysisResponse(requestId: request.id)
-    }
-    
-    private func extractPhaseScore(from response: String, phase: String) -> String {
-        // Look for Fit Score in the response (0-3 scale)
-        if let match = response.range(of: #"Fit Score:\s*(\d+)"#, options: .regularExpression),
-           let scoreText = response[match].split(separator: ":").last,
-           let score = Int(scoreText.trimmingCharacters(in: .whitespaces)) {
-            return String(score)
-        }
-        
-        // Fallback: look for any number 0-3 in the response
-        if let match = response.range(of: #"\b([0-3])\b"#, options: .regularExpression),
-           let scoreText = response[match].split(separator: " ").last,
-           let score = Int(scoreText) {
-            return String(score)
-        }
-        
-        log("⚠️ Could not extract score for \(phase), defaulting to 0")
-        return "0"
-    }
+    // Legacy analysis helper functions removed - now using unified fourCycleAnalysis
     
     // MARK: - Analysis Method Handling
     
@@ -606,52 +367,7 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     
     // MARK: - Job Management
     
-    private func getExistingJobData(jobId: String) -> [String: Any]? {
-        // Get active resume ID
-        guard let activeResumeId = sharedDefaults.string(forKey: "activeResumeId") else {
-            log("⚠️ No active resume ID found")
-            return nil
-        }
-        
-        // Get job file path
-        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.kuangming.WhatYOE.shared") else {
-            log("❌ Could not get app group container")
-            return nil
-        }
-        
-        let jobsDir = containerURL.appendingPathComponent("Jobs")
-        let resumeDir = jobsDir.appendingPathComponent(activeResumeId)
-        let jobFile = resumeDir.appendingPathComponent("\(jobId).json")
-        
-        // Read and parse job file
-        guard let data = try? Data(contentsOf: jobFile),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            log("❌ Could not read job file for \(jobId)")
-            return nil
-        }
-        
-        // Extract scores in the same format as fresh analysis
-        if let analysisScores = json["analysisScores"] as? [String: Any],
-           let finalScore = analysisScores["finalScore"] as? Double {
-            
-            let responseData: [String: Any] = [
-                "aiAnalysis": String(format: "%.1f", finalScore),
-                "rawScore": String(Int(finalScore.rounded())),
-                "status": "success",
-                "scores": [
-                    "fitScores": analysisScores["yearsOfExperienceFit"] as? Double ?? 0,
-                    "gapScores": analysisScores["yearsOfExperienceGap"] as? Double ?? 0,
-                    "finalScore": finalScore
-                ]
-            ]
-            
-            log("✅ Retrieved existing job data for \(jobId): \(finalScore)")
-            return responseData
-        }
-        
-        log("⚠️ Could not extract scores from job file for \(jobId)")
-        return nil
-    }
+    // Job existence checking now handled by backend for cleaner architecture
     
     
     // MARK: - Resume Management
