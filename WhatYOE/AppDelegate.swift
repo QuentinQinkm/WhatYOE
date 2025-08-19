@@ -314,14 +314,107 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func cleanResumeTextWithAI(_ text: String) async throws -> String {
-        // Use Guided Generation for structured resume extraction
-        let session = LanguageModelSession(instructions: PromptTemplates.resumeCleaningPrompt)
-        let prompt = PromptTemplates.createCleaningPrompt(text: text, isResume: true)
-        let response = try await session.respond(to: prompt, generating: CleanedResume.self)
+        print("🧹 Starting multi-step resume cleaning...")
+        print("📝 Resume text length: \(text.count) chars")
         
-        // Convert structured data back to text for backward compatibility
-        return formatCleanedResumeAsText(response.content)
+        // Step 1: Extract basic contact info and summary
+        print("📋 Step 1: Extracting contact info and summary...")
+        let contactAndSummary = try await extractContactAndSummary(text)
+        
+        // Step 2: Extract and categorize experience
+        print("💼 Step 2: Extracting professional experience...")
+        let experience = try await extractProfessionalExperience(text)
+        
+        // Step 3: Calculate years of experience
+        print("📊 Step 3: Calculating years of experience...")
+        let yoeCalculation = try await calculateYearsOfExperience(text, experience: experience)
+        
+        // Step 4: Extract education
+        print("🎓 Step 4: Extracting education...")
+        let education = try await extractEducation(text)
+        
+        // Step 5: Extract skills
+        print("🛠️ Step 5: Extracting skills...")
+        let skills = try await extractSkills(text)
+        
+        // Combine all results into CleanedResume
+        let cleanedResume = CleanedResume(
+            contactInfo: contactAndSummary.contact,
+            summary: contactAndSummary.summary,
+            professionalExperience: experience,
+            yearsOfExperience: yoeCalculation,
+            education: education,
+            skills: skills,
+            certifications: [] // TODO: Add certification extraction if needed
+        )
+        
+        print("✅ Multi-step cleaning completed successfully")
+        return formatCleanedResumeAsText(cleanedResume)
     }
+    
+    // MARK: - Multi-Step Resume Extraction Functions
+    
+    private func extractContactAndSummary(_ text: String) async throws -> (contact: ContactInfo, summary: String?) {
+        let session = LanguageModelSession(instructions: "Extract contact information and professional summary from this resume. Be accurate and only extract what's clearly visible.")
+        let prompt = "Extract contact info and summary from:\n\n\(text)"
+        let response = try await session.respond(to: prompt, generating: ContactAndSummaryExtraction.self)
+        return (contact: response.content.contactInfo, summary: response.content.summary)
+    }
+    
+    private func extractProfessionalExperience(_ text: String) async throws -> ProfessionalExperience {
+        let session = LanguageModelSession(instructions: "Extract and categorize professional experience. Separate paid work (employment, internships, freelance) from other experience (projects, volunteer, research). Be precise with dates.")
+        let prompt = "Extract professional experience from:\n\n\(text)"
+        let response = try await session.respond(to: prompt, generating: ProfessionalExperience.self)
+        return response.content
+    }
+    
+    private func calculateYearsOfExperience(_ text: String, experience: ProfessionalExperience) async throws -> YearsOfExperienceCalculation {
+        let session = LanguageModelSession(instructions: "Calculate years of experience in 2 parts: 1) Work YOE from paid positions only 2) Project experience years. Final YOE = Work YOE + (Project YOE / 2). Be precise with calculations.")
+        
+        let workText = experience.workExperience.map { work in
+            "\(work.role) at \(work.company): \(work.startDate) - \(work.endDate ?? "Present")"
+        }.joined(separator: "\n")
+        
+        let projectText = experience.otherExperience.map { other in
+            "\(other.title) (\(other.experienceType)): \(other.startDate ?? "Unknown") - \(other.endDate ?? "Present")"
+        }.joined(separator: "\n")
+        
+        let prompt = """
+        Calculate YOE in 2 steps:
+        
+        STEP 1 - Work Experience (paid positions):
+        \(workText.isEmpty ? "No paid work experience found" : workText)
+        
+        STEP 2 - Project Experience:
+        \(projectText.isEmpty ? "No project experience found" : projectText)
+        
+        FINAL CALCULATION:
+        - Calculate Work YOE precisely (each job duration)
+        - Calculate Project YOE 
+        - Final workYOE = Work YOE + (Project YOE / 2)
+        
+        Original resume for reference:
+        \(text)
+        """
+        
+        let response = try await session.respond(to: prompt, generating: YearsOfExperienceCalculation.self)
+        return response.content
+    }
+    
+    private func extractEducation(_ text: String) async throws -> [Education] {
+        let session = LanguageModelSession(instructions: "Extract education information including degrees, institutions, fields of study, and graduation years. Only extract what's clearly stated.")
+        let prompt = "Extract education from:\n\n\(text)"
+        let response = try await session.respond(to: prompt, generating: EducationExtraction.self)
+        return response.content.education
+    }
+    
+    private func extractSkills(_ text: String) async throws -> Skills {
+        let session = LanguageModelSession(instructions: "Extract all skills mentioned. Categorize into technical skills (tools, technologies, programming languages), professional skills (soft skills, competencies), and industry skills (domain knowledge).")
+        let prompt = "Extract skills from:\n\n\(text)"
+        let response = try await session.respond(to: prompt, generating: Skills.self)
+        return response.content
+    }
+
     
     private func formatCleanedResumeAsText(_ resume: CleanedResume) -> String {
         var text = ""
@@ -336,6 +429,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let summary = resume.summary {
             text += "PROFESSIONAL SUMMARY\n\(summary)\n\n"
         }
+        
+        // Years of Experience Calculation
+        text += "YEARS OF EXPERIENCE\n"
+        text += "Work YOE: \(String(format: "%.1f", resume.yearsOfExperience.workYOE)) years\n"
+        text += "Calculation: \(resume.yearsOfExperience.workYOECalculation)\n"
+        text += "Total (including projects): \(String(format: "%.1f", resume.yearsOfExperience.totalYOEIncludingProjects)) years\n"
+        if !resume.yearsOfExperience.excludedGaps.isEmpty {
+            text += "Excluded gaps: \(resume.yearsOfExperience.excludedGaps.joined(separator: ", "))\n"
+        }
+        text += "\n"
         
         // Professional Experience
         text += "PROFESSIONAL EXPERIENCE\n\n"
@@ -405,70 +508,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     
-    // MARK: - Job Analysis Server
-    
-    private func processJobAnalysisRequest() async {
-        let sharedDefaults = UserDefaults(suiteName: "group.com.kuangming.WhatYOE.shared") ?? UserDefaults.standard
-        
-        guard let requestData = sharedDefaults.data(forKey: "analysisRequest"),
-              let request = try? JSONDecoder().decode(AnalysisRequest.self, from: requestData) else {
-            print("❌ No valid analysis request found")
-            return
-        }
-        
-        print("🔍 Processing job analysis request: \(request.id)")
-        
-        do {
-            // Clean job description first
-            let cleanedJob = try await cleanJobDescriptionWithAI(request.jobDescription)
-            
-            // Perform 4-round guided evaluation
-            let evaluation = try await GuidedEvaluationService.performFourRoundGuidedEvaluation(
-                resumeText: request.resumeText,
-                jobDescription: cleanedJob
-            )
-            
-            // Format and combine results
-            let phaseResults = GuidedEvaluationService.formatFourRoundEvaluation(evaluation)
-            let combinedResults = combineEvaluationResults(results: phaseResults)
-            
-            // Send response back
-            let response = AnalysisResponse(
-                requestId: request.id,
-                results: combinedResults,
-                error: nil,
-                timestamp: Date()
-            )
-            
-            if let responseData = try? JSONEncoder().encode(response) {
-                sharedDefaults.set(responseData, forKey: "analysisResponse")
-                sharedDefaults.set("completed", forKey: "analysisStatus")
-                print("✅ Job analysis completed and response saved")
-            }
-            
-        } catch {
-            print("❌ Job analysis failed: \(error)")
-            
-            // Send error response
-            let response = AnalysisResponse(
-                requestId: request.id,
-                results: nil,
-                error: error.localizedDescription,
-                timestamp: Date()
-            )
-            
-            if let responseData = try? JSONEncoder().encode(response) {
-                sharedDefaults.set(responseData, forKey: "analysisResponse")
-                sharedDefaults.set("error", forKey: "analysisStatus")
-            }
-        }
-    }
+    // MARK: - Job Processing Helpers
     
     private func cleanJobDescriptionWithAI(_ text: String) async throws -> String {
-        // Use Guided Generation for structured job description extraction
-        let session = LanguageModelSession(instructions: PromptTemplates.jobCleaningPrompt)
-        let prompt = PromptTemplates.createCleaningPrompt(text: text, isResume: false)
-        let response = try await session.respond(to: prompt, generating: CleanedJobDescription.self)
+        // Fix: Create single comprehensive prompt instead of using session instructions + prompt
+        // This avoids job text duplication that was causing context window overflow
+        let comprehensivePrompt = """
+        \(PromptTemplates.jobCleaningPrompt)
+        
+        Extract and structure this job description following the format requirements:
+        
+        === RAW JOB DESCRIPTION ===
+        \(text)
+        
+        === END RAW JOB DESCRIPTION ===
+        
+        Provide complete structured data extraction.
+        """
+        
+        // Use session without instructions to avoid duplication
+        let session = LanguageModelSession()
+        let response = try await session.respond(to: comprehensivePrompt, generating: CleanedJobDescription.self)
         
         // Convert structured data back to text for backward compatibility
         return formatCleanedJobAsText(response.content)
@@ -538,10 +598,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     
     
-    private func combineEvaluationResults(results: [String]) -> String {
-        let (formattedOutput, _, _, _) = ScoreCalculator.processEvaluationResults(results: results)
-        return formattedOutput
-    }
+    // Legacy combination removed for SPEC scoring
     
     // Score calculation and extraction now handled by ScoreCalculator
     
@@ -752,24 +809,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             if let existingJob = JobManager.shared.getJobByLinkedInId(linkedinJobId, resumeId: activeResumeId) {
                 print("✅ Job \(linkedinJobId) already exists for resume \(activeResumeId) - returning existing data")
                 
-                // Build response from existing job data - same format as fresh analysis
-                let fitScores = [
-                    existingJob.analysisScores.yearsOfExperienceFit,
-                    existingJob.analysisScores.educationFit,
-                    existingJob.analysisScores.technicalSkillsFit,
-                    existingJob.analysisScores.relevantExperienceFit
-                ].filter { $0 > 0.0 }
-                
-                let gapScores = [
-                    existingJob.analysisScores.yearsOfExperienceGap,
-                    existingJob.analysisScores.educationGap,
-                    existingJob.analysisScores.technicalSkillsGap,
-                    existingJob.analysisScores.relevantExperienceGap
-                ].filter { $0 > 0.0 }
-                
+                // Build response from existing job data using 5-variable system
                 let analysisScores = AnalysisScores(
-                    fitScores: fitScores,
-                    gapScores: gapScores,
+                    fitScores: [], // Legacy fit/gap scores deprecated in 5-variable system
+                    gapScores: [], // Legacy fit/gap scores deprecated in 5-variable system
                     finalScore: existingJob.analysisScores.finalScore
                 )
                 
@@ -792,43 +835,65 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             
             print("🔄 Job \(linkedinJobId) not found - proceeding with fresh analysis")
             
-            // Check which analysis method to use
-            let analysisMethod = sharedDefaults.string(forKey: "analysisMethod") ?? "fourRun"
-            let analysisType = sharedDefaults.string(forKey: "safariAnalysisType") ?? "standard"
-            
-            print("🌐 Processing Safari analysis request using \(analysisMethod) method")
+            // Use new 5-variable scoring system
+            print("🌐 Processing Safari analysis request using NEW 5-variable scoring system")
             
             let cleanedJob = try await cleanJobDescriptionWithAI(request.jobDescription)
-            let results: String
             
-            if analysisMethod == "singleRun" || analysisType == "comprehensive" {
-                // Use comprehensive guided evaluation
-                print("🚀 Using comprehensive guided evaluation")
-                let evaluation = try await GuidedEvaluationService.performComprehensiveGuidedEvaluation(
-                    resumeText: request.resumeText,
-                    jobDescription: cleanedJob
-                )
-                results = GuidedEvaluationService.formatComprehensiveEvaluation(evaluation)
-            } else {
-                // Use four-round guided evaluation
-                print("🔄 Using four-round guided evaluation")
-                let evaluation = try await GuidedEvaluationService.performFourRoundGuidedEvaluation(
-                    resumeText: request.resumeText,
-                    jobDescription: cleanedJob
-                )
-                let phaseResults = GuidedEvaluationService.formatFourRoundEvaluation(evaluation)
-                results = combineEvaluationResults(results: phaseResults)
-            }
+            // Step 1: Parse required YOE from job description (using existing helper)
+            let requiredYOE = Self.extractRequiredYOE(from: cleanedJob)
             
-            // Save the job analysis result
+            // Step 2: Extract actual YOE from cleaned resume structure (work experience only)
+            let cleanedResumeText = try await cleanResumeTextWithAI(request.resumeText)
+            let actualYOE = Self.extractWorkYOEFromCleanedText(cleanedResumeText)
+            
+            // Step 3: Get LLM evaluation for experience, education, and skills
+            let llmResult = try await GuidedEvaluationService.performFiveVariableLLMEvaluation(resumeText: request.resumeText, jobDescription: cleanedJob)
+            
+            // Step 4: Calculate final score using new 5-variable formula
+            let scoringResult = ScoreCalculator.computeCandidateScore(
+                actualYOE: actualYOE,
+                requiredYOE: requiredYOE,
+                expScore: llmResult.exp_score,
+                eduScore: llmResult.edu_score,
+                skillScore: llmResult.skill_score
+            )
+            
+            let results = """
+            5-VARIABLE SCORING RESULTS
+            Required YOE: \(String(format: "%.1f", requiredYOE))
+            Actual YOE: \(String(format: "%.1f", actualYOE))
+            Experience Score: \(llmResult.exp_score)/4
+            Education Score: \(llmResult.edu_score)/4
+            Skills Score: \(llmResult.skill_score)/4
+            Final Score: \(scoringResult.score_percentage) / 100 (\(ScoreCalculator.specRating(for: scoringResult.score_percentage)))
+            
+            Rationales:
+            Experience: \(llmResult.experience_rationale)
+            Education: \(llmResult.education_rationale)
+            Skills: \(llmResult.skills_rationale)
+            """
+            
+            // Save the job analysis result with new 5-variable data
             let jobTitle = request.jobTitle ?? "Unknown Position"
             let company = request.company ?? "Unknown Company"
             
-            let savedJob = JobManager.shared.createJobFromSafariAnalysis(
+            // Create JobAnalysisScores with new 5-variable data
+            let jobScores = JobAnalysisScores(
+                finalScore: Double(scoringResult.score_percentage),
+                exp_score: llmResult.exp_score,
+                edu_score: llmResult.edu_score,
+                skill_score: llmResult.skill_score,
+                actual_yoe: actualYOE,
+                required_yoe: requiredYOE
+            )
+            
+            let savedJob = JobManager.shared.createJobFromSafariAnalysisWithScores(
                 jobTitle: jobTitle,
                 company: company,
                 cleanedJobDescription: cleanedJob,
                 analysisResult: results,
+                analysisScores: jobScores,
                 resumeId: activeResumeId,
                 linkedinJobId: linkedinJobId
             )
@@ -844,26 +909,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             sharedDefaults.set(newJobNotification, forKey: "newJobNotification")
             print("🔔 [Backend] Signaled new job to desktop app: \(savedJob.jobId)")
             
-            // Prepare scores for response
-            let fitScores = [
-                savedJob.analysisScores.yearsOfExperienceFit,
-                savedJob.analysisScores.educationFit,
-                savedJob.analysisScores.technicalSkillsFit,
-                savedJob.analysisScores.relevantExperienceFit
-            ].filter { $0 > 0.0 } // Only include valid scores
-            
-            let gapScores = [
-                savedJob.analysisScores.yearsOfExperienceGap,
-                savedJob.analysisScores.educationGap,
-                savedJob.analysisScores.technicalSkillsGap,
-                savedJob.analysisScores.relevantExperienceGap
-            ].filter { $0 > 0.0 } // Only include valid scores
-            
-            print("🔢 Final scores for Safari - Fit: \(fitScores), Gap: \(gapScores), Final: \(savedJob.analysisScores.finalScore)")
-            
+            // Prepare scores for response (now using 0-100 final score; fit/gap arrays deprecated)
             let analysisScores = AnalysisScores(
-                fitScores: fitScores,
-                gapScores: gapScores,
+                fitScores: [],
+                gapScores: [],
                 finalScore: savedJob.analysisScores.finalScore
             )
             
@@ -905,35 +954,52 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let sharedDefaults = UserDefaults(suiteName: "group.com.kuangming.WhatYOE.shared") ?? UserDefaults.standard
         
         do {
-            // Check which analysis method to use
-            let analysisMethod = sharedDefaults.string(forKey: "analysisMethod") ?? "fourRun"
-            
-            print("🖥️ Processing desktop analysis request using \(analysisMethod) method")
+            print("🖥️ Processing desktop analysis request using NEW 5-variable scoring system")
             
             let cleanedJob = try await cleanJobDescriptionWithAI(request.jobDescription)
             
-            let results: String
+            // Step 1: Parse required YOE from job description (using existing helper)
+            let requiredYOE = Self.extractRequiredYOE(from: cleanedJob)
             
-            if analysisMethod == "singleRun" {
-                // Use comprehensive guided evaluation
-                print("🚀 Using comprehensive guided evaluation")
-                
-                let evaluation = try await GuidedEvaluationService.performComprehensiveGuidedEvaluation(
-                    resumeText: request.resumeText,
-                    jobDescription: cleanedJob
-                )
-                results = GuidedEvaluationService.formatComprehensiveEvaluation(evaluation)
-            } else {
-                // Use four-round guided evaluation
-                print("🔄 Using four-round guided evaluation")
-                
-                let evaluation = try await GuidedEvaluationService.performFourRoundGuidedEvaluation(
-                    resumeText: request.resumeText,
-                    jobDescription: cleanedJob
-                )
-                let phaseResults = GuidedEvaluationService.formatFourRoundEvaluation(evaluation)
-                results = combineEvaluationResults(results: phaseResults)
-            }
+            // Step 2: Extract actual YOE from cleaned resume structure (work experience only)
+            // Desktop already has cleaned resume data, so skip re-cleaning to avoid token limits
+            let actualYOE = Self.extractWorkYOEFromCleanedText(request.resumeText)
+            
+            // Step 3: Get LLM evaluation for experience, education, and skills
+            let llmResult = try await GuidedEvaluationService.performFiveVariableLLMEvaluation(resumeText: request.resumeText, jobDescription: cleanedJob)
+            
+            // Step 4: Calculate final score using new 5-variable formula
+            let scoringResult = ScoreCalculator.computeCandidateScore(
+                actualYOE: actualYOE,
+                requiredYOE: requiredYOE,
+                expScore: llmResult.exp_score,
+                eduScore: llmResult.edu_score,
+                skillScore: llmResult.skill_score
+            )
+            
+            let results = """
+            5-VARIABLE SCORING RESULTS
+            Required YOE: \(String(format: "%.1f", requiredYOE))
+            Actual YOE: \(String(format: "%.1f", actualYOE))
+            Experience Score: \(llmResult.exp_score)/4
+            Education Score: \(llmResult.edu_score)/4
+            Skills Score: \(llmResult.skill_score)/4
+            Final Score: \(scoringResult.score_percentage) / 100 (\(ScoreCalculator.specRating(for: scoringResult.score_percentage)))
+            
+            Rationales:
+            Experience: \(llmResult.experience_rationale)
+            Education: \(llmResult.education_rationale)
+            Skills: \(llmResult.skills_rationale)
+            
+            Component Details:
+            YOE Factor (f_YOE): \(String(format: "%.3f", scoringResult.components.f_YOE))
+            Experience Score (S_exp): \(String(format: "%.3f", scoringResult.components.S_exp))
+            Education Weight (w_edu): \(String(format: "%.3f", scoringResult.components.w_edu))
+            Education Score (S_edu): \(String(format: "%.3f", scoringResult.components.S_edu))
+            Base Score (S_base): \(String(format: "%.3f", scoringResult.components.S_base))
+            Skills Multiplier (M_skill): \(String(format: "%.3f", scoringResult.components.M_skill))
+            Final Score (S_final): \(String(format: "%.3f", scoringResult.components.S_final))
+            """
             
             // Send response back to desktop app
             let response = AnalysisResponse(
@@ -968,6 +1034,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     // MARK: - Helper Methods
+    
+    /// Extract work YOE from cleaned resume text using regex
+    private static func extractWorkYOEFromCleanedText(_ text: String) -> Double {
+        // Look for "Work YOE: X.X years" pattern
+        let pattern = "Work YOE:\\s*([0-9]+(?:\\.[0-9]+)?)\\s*years"
+        if let regex = try? NSRegularExpression(pattern: pattern, options: []),
+           let match = regex.firstMatch(in: text, options: [], range: NSRange(text.startIndex..., in: text)),
+           match.numberOfRanges > 1 {
+            let range = match.range(at: 1)
+            if let swiftRange = Range(range, in: text) {
+                let yoeString = String(text[swiftRange])
+                return Double(yoeString) ?? 0.0
+            }
+        }
+        return 0.0
+    }
     
     private func getDesktopAppURL() -> URL? {
         let desktopAppName = "WhatYOE-Desktop.app"
@@ -1022,5 +1104,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 print("❌ Failed to show notification: \(error.localizedDescription)")
             }
         }
+    }
+    
+    // MARK: - SPEC Helpers
+    static func extractRequiredYOE(from text: String) -> Double {
+        // Try patterns like "Minimum 3 years", "3+ years", "at least 2 years"
+        let patterns = [
+            "[Mm]in(?:imum)?\\s*([0-9]+(?:\\.[0-9]+)?)\\s*\\+?\\s*[Yy]ears",
+            "([0-9]+(?:\\.[0-9]+)?)\\s*\\+?\\s*[Yy]ears",
+            "at least\\s*([0-9]+(?:\\.[0-9]+)?)\\s*[Yy]ears"
+        ]
+        for p in patterns {
+            if let regex = try? NSRegularExpression(pattern: p) {
+                let range = NSRange(text.startIndex..<text.endIndex, in: text)
+                if let match = regex.firstMatch(in: text, range: range) {
+                    let g = match.range(at: 1)
+                    if let r = Range(g, in: text) {
+                        if let val = Double(String(text[r])) { return val }
+                    }
+                }
+            }
+        }
+        return 0.0
     }
 }

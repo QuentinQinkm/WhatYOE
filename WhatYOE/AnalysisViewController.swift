@@ -647,26 +647,11 @@ class LocalAnalysisViewController: NSViewController {
         resultsTextView.string = "🔍 Analyzing resume-job match...\n\nPlease wait while the AI processes your documents."
         
         Task {
-            do {
-                let cleanedJob = await cleanJobDescription(jobDescription)
-                let results = try await performFourRoundEvaluation(
-                    resumeText: resume.cleanedText,
-                    jobDescription: cleanedJob
-                )
-                
-                let combinedResults = combineEvaluationResults(results: results)
-                
-                await MainActor.run {
-                    self.resultsTextView.string = combinedResults
-                    self.analyzeButton.title = "Analyze Match"
-                    self.analyzeButton.isEnabled = true
-                }
-            } catch {
-                await MainActor.run {
-                    self.resultsTextView.string = "Analysis failed: \(error.localizedDescription)"
-                    self.analyzeButton.title = "Analyze Match"
-                    self.analyzeButton.isEnabled = true
-                }
+            let cleanedJob = await cleanJobDescription(jobDescription)
+            await MainActor.run {
+                self.resultsTextView.string = "Backend handles analysis via the browser extension.\n\nCleaned Job (preview):\n\n\(cleanedJob)"
+                self.analyzeButton.title = "Analyze Match"
+                self.analyzeButton.isEnabled = true
             }
         }
     }
@@ -689,36 +674,7 @@ class LocalAnalysisViewController: NSViewController {
         }
     }
     
-    private func performFourRoundEvaluation(resumeText: String, jobDescription: String) async throws -> [String] {
-        let model = SystemLanguageModel.default
-        
-        guard case .available = model.availability else {
-            throw NSError(domain: "AI", code: 1, userInfo: [NSLocalizedDescriptionKey: "AI not available"])
-        }
-        
-        let prompts = [
-            PromptTemplates.yearsEvaluationPrompt,
-            PromptTemplates.educationEvaluationPrompt,
-            PromptTemplates.technicalSkillsEvaluationPrompt,
-            PromptTemplates.relevantExperienceEvaluationPrompt
-        ]
-        
-        var results: [String] = []
-        
-        for prompt in prompts {
-            let session = LanguageModelSession(instructions: prompt)
-            let fullPrompt = prompt + "\n\nResume:\n\(resumeText)\n\nJob Description:\n\(jobDescription)"
-            let response = try await session.respond(to: fullPrompt)
-            results.append(response.content)
-        }
-        
-        return results
-    }
-    
-    private func combineEvaluationResults(results: [String]) -> String {
-        let (formattedOutput, _, _, _) = ScoreCalculator.processEvaluationResults(results: results)
-        return formattedOutput
-    }
+    // Local analysis disabled. Backend performs analysis via extension.
     
     // Score calculation and extraction now handled by ScoreCalculator
 }

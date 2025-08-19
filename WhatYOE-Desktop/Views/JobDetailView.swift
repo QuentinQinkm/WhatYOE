@@ -77,6 +77,18 @@ struct JobDetailView: View {
     }
     
     private func formatJobContent(_ job: JobItem) -> String {
+        let score = job.analysisScores.finalScore
+        let rating = getRating(for: score)
+        
+        let rawScoresSection = """
+        📋 **5-Variable Scores:**
+        • **Experience Score:** \(job.analysisScores.exp_score)/4
+        • **Education Score:** \(job.analysisScores.edu_score)/4
+        • **Skills Score:** \(job.analysisScores.skill_score)/4
+        • **Actual YOE:** \(String(format: "%.1f", job.analysisScores.actual_yoe)) years
+        • **Required YOE:** \(String(format: "%.1f", job.analysisScores.required_yoe)) years
+        """
+        
         return """
         📊 **Job Analysis Report**
         
@@ -85,21 +97,27 @@ struct JobDetailView: View {
         🔗 **LinkedIn Job ID:** \(job.jobId)
         📅 **Analyzed:** \(DateFormatter.shortDate.string(from: job.dateAnalyzed))
         
-        🎯 **Final Score:** \(String(format: "%.1f", job.analysisScores.finalScore)) / 4.0
+        🎯 **Final Score:** \(String(format: "%.0f", score)) / 100
+        📊 **Rating:** \(rating)
         
-        📋 **Detailed Scores:**
-        • Years of Experience: Fit \(String(format: "%.1f", job.analysisScores.yearsOfExperienceFit)) | Gap \(String(format: "%.1f", job.analysisScores.yearsOfExperienceGap))
-        • Education: Fit \(String(format: "%.1f", job.analysisScores.educationFit)) | Gap \(String(format: "%.1f", job.analysisScores.educationGap))
-        • Technical Skills: Fit \(String(format: "%.1f", job.analysisScores.technicalSkillsFit)) | Gap \(String(format: "%.1f", job.analysisScores.technicalSkillsGap))
-        • Relevant Experience: Fit \(String(format: "%.1f", job.analysisScores.relevantExperienceFit)) | Gap \(String(format: "%.1f", job.analysisScores.relevantExperienceGap))
+        \(rawScoresSection)
+        
+        📋 **Detailed Analysis:**
+        \(job.analysisResult)
         
         📝 **Job Description:**
         \(job.cleanedJobDescription)
-        
-        🔍 **Analysis Result:**
-        \(job.analysisResult)
         """
     }
+    
+    private func getRating(for score: Double) -> String {
+        if score < 75 { return "❌ Denied" }
+        if score < 85 { return "📉 Poor" }
+        if score < 93 { return "⚠️ Maybe" }
+        return "✅ Good"
+    }
+    
+
     
     private func openLinkedInJob(jobId: String) {
         let linkedinUrl = "https://www.linkedin.com/jobs/view/\(jobId)"
@@ -108,3 +126,4 @@ struct JobDetailView: View {
         }
     }
 }
+

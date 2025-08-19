@@ -13,34 +13,27 @@ import os.log
 // MARK: - Job Data Models
 
 struct JobAnalysisScores {
-    let yearsOfExperienceFit: Double
-    let yearsOfExperienceGap: Double
-    let educationFit: Double
-    let educationGap: Double
-    let technicalSkillsFit: Double
-    let technicalSkillsGap: Double
-    let relevantExperienceFit: Double
-    let relevantExperienceGap: Double
     let finalScore: Double
     
-    init(yearsOfExperienceFit: Double = 0.0,
-         yearsOfExperienceGap: Double = 0.0,
-         educationFit: Double = 0.0,
-         educationGap: Double = 0.0,
-         technicalSkillsFit: Double = 0.0,
-         technicalSkillsGap: Double = 0.0,
-         relevantExperienceFit: Double = 0.0,
-         relevantExperienceGap: Double = 0.0,
-         finalScore: Double = 0.0) {
-        self.yearsOfExperienceFit = yearsOfExperienceFit
-        self.yearsOfExperienceGap = yearsOfExperienceGap
-        self.educationFit = educationFit
-        self.educationGap = educationGap
-        self.technicalSkillsFit = technicalSkillsFit
-        self.technicalSkillsGap = technicalSkillsGap
-        self.relevantExperienceFit = relevantExperienceFit
-        self.relevantExperienceGap = relevantExperienceGap
+    // 5-variable system fields (current active system)
+    let exp_score: Int      // Experience score (0-4) from LLM
+    let edu_score: Int      // Education score (0-4) from LLM
+    let skill_score: Int    // Skills score (0-4) from LLM
+    let actual_yoe: Double  // Parsed actual YOE (0-8)
+    let required_yoe: Double // Parsed required YOE (0-8)
+    
+    init(finalScore: Double = 0.0, 
+         exp_score: Int = 0, 
+         edu_score: Int = 0, 
+         skill_score: Int = 0, 
+         actual_yoe: Double = 0.0, 
+         required_yoe: Double = 0.0) {
         self.finalScore = finalScore
+        self.exp_score = exp_score
+        self.edu_score = edu_score
+        self.skill_score = skill_score
+        self.actual_yoe = actual_yoe
+        self.required_yoe = required_yoe
     }
 }
 

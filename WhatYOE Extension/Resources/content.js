@@ -56,24 +56,21 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
             card.querySelector('.yoe-ai-label')?.remove();
             card.querySelector('.yoe-progress-label')?.remove(); // Clear progress label too
 
-            // Determine color and text for the label based on AI score with updated rating scale
+            // Determine color and text for the label based on 0–100 score with new rating scale
             let text, color;
             if (typeof result.score === 'number') {
-                if (result.score >= 0 && result.score < 1.3) {
-                    text = `Reject: ${result.score.toFixed(1)}`;
+                if (result.score < 75) {
+                    text = `Denied: ${result.score.toFixed(0)}`;
                     color = '#dc3545'; // Red
-                } else if (result.score >= 1.3 && result.score < 2.0) {
-                    text = `Poor: ${result.score.toFixed(1)}`;
+                } else if (result.score < 85) {
+                    text = `Poor: ${result.score.toFixed(0)}`;
                     color = '#fd7e14'; // Orange
-                } else if (result.score >= 2.0 && result.score < 2.7) {
-                    text = `Maybe: ${result.score.toFixed(1)}`;
+                } else if (result.score < 93) {
+                    text = `Maybe: ${result.score.toFixed(0)}`;
                     color = '#ffc107'; // Yellow
-                } else if (result.score >= 2.7) {
-                    text = `Good: ${result.score.toFixed(1)}`;
-                    color = '#28a745'; // Green
                 } else {
-                    text = 'Unknown';
-                    color = '#6c757d'; // Gray
+                    text = `Good: ${result.score.toFixed(0)}`;
+                    color = '#28a745'; // Green
                 }
             } else {
                 text = 'Unknown';
@@ -417,7 +414,7 @@ if (window.location.hostname.includes('linkedin.com') && window.top === window) 
                         
                         console.log(`🤖 [YOE AI] Final score: ${score}`);
                         
-                        // Apply label to job card (now using decimal scores)
+                        // Apply label to job card using 0–100 score
                         if (score >= 0) {
                             const result = { score: score };
                             this.analysisResults.set(jobId, result);

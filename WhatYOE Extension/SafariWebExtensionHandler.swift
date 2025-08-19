@@ -1,6 +1,5 @@
 import SafariServices
 import os.log
-import FoundationModels
 import AppKit
 
 struct ResumeItem: Codable {
@@ -315,10 +314,9 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         sharedDefaults.removeObject(forKey: "safariAnalysisResponse")
         log("🧹 Cleared old scores and response data before starting new analysis")
         
-        // Store request in shared defaults with fourRun method specified
+        // Store request in shared defaults
         if let requestData = try? JSONEncoder().encode(request) {
             sharedDefaults.set(requestData, forKey: "safariAnalysisRequest")
-            sharedDefaults.set("fourRun", forKey: "analysisMethod") // Ensure 4-cycle method
             sharedDefaults.set("pending", forKey: "safariAnalysisStatus")
         }
         
@@ -328,11 +326,7 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     
     // MARK: - Analysis Method Handling
     
-    private func getAnalysisMethodFromSharedDefaults() -> String {
-        return sharedDefaults.string(forKey: "analysisMethod") ?? "fourRun"
-    }
-    
-    // Legacy analysis helper functions removed - now using unified fourCycleAnalysis
+    // Now using unified spec scoring system
     
     // MARK: - Analysis Method Handling
     

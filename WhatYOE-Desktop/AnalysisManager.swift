@@ -6,24 +6,6 @@ Frontend-only - communicates with backend WhatYOE app for analysis
 import Foundation
 import AppKit
 
-enum AnalysisMethod: CaseIterable {
-    case fourRun, singleRun
-    
-    var title: String {
-        switch self {
-        case .fourRun: return "4-Run Analysis"
-        case .singleRun: return "Single-Run Analysis"
-        }
-    }
-    
-    var userDefaultsKey: String {
-        switch self {
-        case .fourRun: return "fourRun"
-        case .singleRun: return "singleRun"
-        }
-    }
-}
-
 @MainActor
 class AnalysisManager {
     static let shared = AnalysisManager()
@@ -40,12 +22,8 @@ class AnalysisManager {
     
     func performAnalysis(
         resume: ResumeItem,
-        jobDescription: String,
-        method: AnalysisMethod
+        jobDescription: String
     ) async throws -> String {
-        
-        // Set analysis method preference
-        userDefaults.set(method.userDefaultsKey, forKey: "analysisMethod")
         
         // Create analysis request
         let request = AnalysisRequest(

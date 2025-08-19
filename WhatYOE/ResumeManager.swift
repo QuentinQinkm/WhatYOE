@@ -160,6 +160,90 @@ class ResumeManager {
         return cleanedText
     }
     
+    // MARK: - YOE Parsing for 5-variable System
+    
+    func parseActualYOE(from resumeText: String) async throws -> ResumeParsingResult {
+        // Implementation requirements from development guide:
+        // 1. Extract work experience sections
+        // 2. Calculate total relevant years (avoid double-counting overlaps)
+        // 3. Include project experience using standard conversion:
+        //    - Major projects (6+ months): count as work experience
+        //    - Moderate projects (2-6 months): count as 0.5x
+        //    - Minor projects (<2 months): count as 0.1x
+        // 4. Cap at 8.0 years maximum
+        // 5. Return confidence score for validation
+        
+        do {
+            let result = try await GuidedEvaluationService.performResumeParsingForYOE(resumeText: resumeText)
+            return result
+        } catch {
+            os_log(.error, "Failed to parse YOE from resume: %@", error.localizedDescription)
+            // Return fallback result
+            return ResumeParsingResult(
+                actual_yoe: 0.0,
+                confidence: 0.0,
+                calculation_notes: "Failed to parse: \(error.localizedDescription)"
+            )
+        }
+    }
+    
+    // MARK: - Required YOE Parsing
+    
+    func parseRequiredYOE(from jobDescription: String) -> Double {
+        // Extract phrases like:
+        // "3+ years of experience"
+        // "minimum 5 years"
+        // "2-4 years experience required"
+        // Return median of range, cap at 8.0
+        
+        let patterns = [
+            "[Mm]in(?:imum)?\\s*([0-9]+(?:\\.[0-9]+)?)\\s*\\+?\\s*[Yy]ears",
+            "([0-9]+(?:\\.[0-9]+)?)\\s*\\+?\\s*[Yy]ears",
+            "at least\\s*([0-9]+(?:\\.[0-9]+)?)\\s*[Yy]ears",
+            "([0-9]+(?:\\.[0-9]+)?)\\s*[-–]\\s*([0-9]+(?:\\.[0-9]+)?)\\s*[Yy]ears"
+        ]
+        
+        var extractedYears: [Double] = []
+        
+        for pattern in patterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
+                let range = NSRange(jobDescription.startIndex..<jobDescription.endIndex, in: jobDescription)
+                let matches = regex.matches(in: jobDescription, options: [], range: range)
+                
+                for match in matches {
+                    if match.numberOfRanges >= 2 {
+                        // Single number or start of range
+                        let firstRange = match.range(at: 1)
+                        if let r1 = Range(firstRange, in: jobDescription) {
+                            if let year1 = Double(String(jobDescription[r1])) {
+                                if match.numberOfRanges >= 3 {
+                                    // Range format (e.g., "2-4 years")
+                                    let secondRange = match.range(at: 2)
+                                    if let r2 = Range(secondRange, in: jobDescription) {
+                                        if let year2 = Double(String(jobDescription[r2])) {
+                                            // Take median of range
+                                            extractedYears.append((year1 + year2) / 2.0)
+                                            continue
+                                        }
+                                    }
+                                }
+                                extractedYears.append(year1)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Return the most common or highest reasonable value, capped at 8.0
+        if extractedYears.isEmpty {
+            return 0.0
+        }
+        
+        let cappedYears = extractedYears.map { min($0, 8.0) }
+        return cappedYears.max() ?? 0.0
+    }
+    
     // MARK: - Utility Methods
     
     func loadResumes() {

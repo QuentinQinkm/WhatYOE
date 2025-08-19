@@ -3,7 +3,6 @@ import SwiftUI
 struct AnalysisView: View {
     let selectedResume: ResumeItem?
     @State private var jobDescription = ""
-    @State private var analysisMethod = AnalysisMethod.fourRun
     @State private var isAnalyzing = false
     @State private var analysisResult = ""
     @State private var statusMessage = ""
@@ -33,14 +32,13 @@ struct AnalysisView: View {
                     .font(.headline)
                     .foregroundColor(.black)
                 
-                Picker("Method", selection: $analysisMethod) {
-                    ForEach(AnalysisMethod.allCases, id: \.self) { method in
-                        Text(method.title)
-                            .foregroundColor(.black)
-                            .tag(method)
-                    }
-                }
-                .pickerStyle(SegmentedPickerStyle())
+                Text("New Spec Scoring System (0-100)")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(6)
             }
             
             Button(action: performAnalysis) {
@@ -94,15 +92,14 @@ struct AnalysisView: View {
         guard let resume = selectedResume else { return }
         
         isAnalyzing = true
-        statusMessage = "Starting analysis..."
+        statusMessage = "Starting analysis with new spec scoring system..."
         analysisResult = ""
         
         Task {
             do {
                 let result = try await AnalysisManager.shared.performAnalysis(
                     resume: resume,
-                    jobDescription: jobDescription,
-                    method: analysisMethod
+                    jobDescription: jobDescription
                 )
                 
                 await MainActor.run {

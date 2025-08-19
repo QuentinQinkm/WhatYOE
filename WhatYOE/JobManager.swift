@@ -11,34 +11,27 @@ import os.log
 // MARK: - Job Data Models
 
 struct JobAnalysisScores {
-    let yearsOfExperienceFit: Double
-    let yearsOfExperienceGap: Double
-    let educationFit: Double
-    let educationGap: Double
-    let technicalSkillsFit: Double
-    let technicalSkillsGap: Double
-    let relevantExperienceFit: Double
-    let relevantExperienceGap: Double
     let finalScore: Double
     
-    init(yearsOfExperienceFit: Double = 0.0,
-         yearsOfExperienceGap: Double = 0.0,
-         educationFit: Double = 0.0,
-         educationGap: Double = 0.0,
-         technicalSkillsFit: Double = 0.0,
-         technicalSkillsGap: Double = 0.0,
-         relevantExperienceFit: Double = 0.0,
-         relevantExperienceGap: Double = 0.0,
-         finalScore: Double = 0.0) {
-        self.yearsOfExperienceFit = yearsOfExperienceFit
-        self.yearsOfExperienceGap = yearsOfExperienceGap
-        self.educationFit = educationFit
-        self.educationGap = educationGap
-        self.technicalSkillsFit = technicalSkillsFit
-        self.technicalSkillsGap = technicalSkillsGap
-        self.relevantExperienceFit = relevantExperienceFit
-        self.relevantExperienceGap = relevantExperienceGap
+    // 5-variable system fields (current active system)
+    let exp_score: Int      // Experience score (0-4) from LLM
+    let edu_score: Int      // Education score (0-4) from LLM
+    let skill_score: Int    // Skills score (0-4) from LLM
+    let actual_yoe: Double  // Parsed actual YOE (0-8)
+    let required_yoe: Double // Parsed required YOE (0-8)
+    
+    init(finalScore: Double = 0.0, 
+         exp_score: Int = 0, 
+         edu_score: Int = 0, 
+         skill_score: Int = 0, 
+         actual_yoe: Double = 0.0, 
+         required_yoe: Double = 0.0) {
         self.finalScore = finalScore
+        self.exp_score = exp_score
+        self.edu_score = edu_score
+        self.skill_score = skill_score
+        self.actual_yoe = actual_yoe
+        self.required_yoe = required_yoe
     }
 }
 
@@ -248,42 +241,56 @@ class JobManager {
         return job
     }
     
-    private func extractScoresFromAnalysisResult(_ result: String) -> JobAnalysisScores {
-        // Parse the analysis result to extract all 8 scores plus final score
-        // Using centralized ScoreCalculator methods
+    func createJobFromSafariAnalysisWithScores(jobTitle: String,
+                                             company: String,
+                                             cleanedJobDescription: String,
+                                             analysisResult: String,
+                                             analysisScores: JobAnalysisScores,
+                                             resumeId: String,
+                                             linkedinJobId: String) -> JobItem {
         
-        let yearsExpFit = ScoreCalculator.extractScore(from: result, type: "Fit Score", section: "YEARS OF EXPERIENCE")
-        let yearsExpGap = ScoreCalculator.extractScore(from: result, type: "Gap Score", section: "YEARS OF EXPERIENCE")
+        print("🔍 [Backend JobManager] createJobFromSafariAnalysisWithScores called")
+        print("🔍 [Backend JobManager] Job Title: \(jobTitle)")
+        print("🔍 [Backend JobManager] Company: \(company)")
+        print("🔍 [Backend JobManager] Resume ID: \(resumeId)")
+        print("🔍 [Backend JobManager] LinkedIn Job ID: \(linkedinJobId)")
         
-        let educationFit = ScoreCalculator.extractScore(from: result, type: "Fit Score", section: "EDUCATION")
-        let educationGap = ScoreCalculator.extractScore(from: result, type: "Gap Score", section: "EDUCATION")
-        
-        let techSkillsFit = ScoreCalculator.extractScore(from: result, type: "Fit Score", section: "TECHNICAL SKILLS")
-        let techSkillsGap = ScoreCalculator.extractScore(from: result, type: "Gap Score", section: "TECHNICAL SKILLS")
-        
-        let relevantExpFit = ScoreCalculator.extractScore(from: result, type: "Fit Score", section: "RELEVANT EXPERIENCE")
-        let relevantExpGap = ScoreCalculator.extractScore(from: result, type: "Gap Score", section: "RELEVANT EXPERIENCE")
-        
-        // Calculate final score using centralized logic - only include valid scores (>0.0)
-        let allFitScores = [yearsExpFit, educationFit, techSkillsFit, relevantExpFit]
-        let allGapScores = [yearsExpGap, educationGap, techSkillsGap, relevantExpGap]
-        
-        let fitScores = allFitScores.filter { $0 > 0.0 }
-        let gapScores = allGapScores.filter { $0 > 0.0 }
-        
-        let finalScore = ScoreCalculator.calculateFinalScore(fitScores: fitScores, gapScores: gapScores)
-        
-        return JobAnalysisScores(
-            yearsOfExperienceFit: yearsExpFit,
-            yearsOfExperienceGap: yearsExpGap,
-            educationFit: educationFit,
-            educationGap: educationGap,
-            technicalSkillsFit: techSkillsFit,
-            technicalSkillsGap: techSkillsGap,
-            relevantExperienceFit: relevantExpFit,
-            relevantExperienceGap: relevantExpGap,
-            finalScore: finalScore
+        // Create and save job with provided scores
+        let job = JobItem(
+            jobTitle: jobTitle,
+            company: company,
+            cleanedJobDescription: cleanedJobDescription,
+            analysisResult: analysisResult,
+            analysisScores: analysisScores,
+            resumeId: resumeId,
+            linkedinJobId: linkedinJobId
         )
+        
+        print("🔍 [Backend JobManager] Job created with new 5-variable scores, now calling saveJob...")
+        saveJob(job)
+        print("🔍 [Backend JobManager] Job save completed, returning job")
+        return job
+    }
+    
+    private func extractScoresFromAnalysisResult(_ result: String) -> JobAnalysisScores {
+        // Extract final score from formatted result, set others to 0
+        // This method will be updated to handle both legacy and new formats
+        let pattern = "Final Score:\\s*([0-9]+)"
+        if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
+            let range = NSRange(result.startIndex..<result.endIndex, in: result)
+            if let match = regex.firstMatch(in: result, options: [], range: range) {
+                let scoreRange = match.range(at: 1)
+                if let r = Range(scoreRange, in: result) {
+                    let scoreString = String(result[r])
+                    if let scoreInt = Int(scoreString) {
+                        let finalScore = Double(scoreInt)
+                        return JobAnalysisScores(finalScore: finalScore)
+                    }
+                }
+            }
+        }
+        // Fallback to zeros if not matched
+        return JobAnalysisScores(finalScore: 0)
     }
     
     // Score extraction now handled by ScoreCalculator

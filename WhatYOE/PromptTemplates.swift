@@ -9,215 +9,62 @@ import Foundation
 
 struct PromptTemplates {
     
-    // MARK: - Main Analysis Prompt (MODIFY THIS TO CHANGE BEHAVIOR)
-    static let systemPrompt = """
-    You are a professional recruiter. Analyze how well a resume matches a job description.
-    
-    Format your response as:
-    
-    ## MATCH SCORE: [X/10]
-    
-    ## GOOD CANDIDATE REASONS:
-    • [Reason with evidence from resume]
-    • [Another reason]
-    
-    ## CONCERNS:
-    • [Concern with evidence]
-    • [Another concern]
-    
-    ## RECOMMENDATIONS:
-    • [Specific suggestion]
-    • [Another suggestion]
-    
-    Be specific and cite evidence from both documents.
-    """
-    
-    // MARK: - Alternative Prompts (Switch between these easily)
-    
-    static let detailedPrompt = """
-    You are a senior technical recruiter with 15+ years of experience.
-    
-    Analyze this resume-job match and provide:
-    
-    ## OVERALL ASSESSMENT: [X/10]
-    Brief explanation of the score.
-    
-    ## STRENGTHS
-    List 3-4 key strengths with specific evidence from the resume.
-    
-    ## GAPS  
-    List 2-3 main concerns with their potential impact.
-    
-    ## ACTION ITEMS
-    Specific recommendations to improve the application.
-    
-    Be objective and evidence-based.
-    """
-    
-    static let quickPrompt = """
-    Compare this resume to the job requirements.
-    
-    Rate the match from 1-10 and explain:
-    - Why they're a good fit
-    - What concerns you have
-    - What they should emphasize in their application
-    
-    Keep it concise but specific.
-    """
-    
-    // MARK: - User Message Templates
-    
-    static func createPrompt(resume: String, job: String) -> String {
-        return """
-        RESUME:
-        \(resume)
-        
-        JOB DESCRIPTION:
-        \(job)
-        
-        Analyze the match between this resume and job description.
-        """
-    }
-    
-    static func createDetailedPrompt(resume: String, job: String) -> String {
-        return """
-        Please perform a thorough analysis of this candidate:
-        
-        === CANDIDATE RESUME ===
-        \(resume)
-        
-        === TARGET ROLE ===
-        \(job)
-        
-        Focus on technical skills match, experience level fit, and cultural alignment.
-        """
-    }
+    // (Legacy analysis prompts removed)
 }
 
-// MARK: - Easy Configuration Switch
-extension PromptTemplates {
-    
-    // CHANGE THIS LINE TO SWITCH PROMPT STYLES:
-    static var currentSystemPrompt: String {
-        return systemPrompt  // Change to: detailedPrompt, quickPrompt, etc.
-    }
-    
-    static func getCurrentUserPrompt(resume: String, job: String) -> String {
-        return createPrompt(resume: resume, job: job)  // Change to: createDetailedPrompt, etc.
-    }
-}
+// (Legacy configuration switch removed)
 
 // MARK: - New Pipeline Prompts
 extension PromptTemplates {
     
     // RESUME CLEANING PROMPT  
     static let resumeCleaningPrompt = """
-    You are a professional document processor. Extract and structure resume data into a CleanedResume format.
+    Extract resume data into CleanedResume format.
     
-    PROFESSIONAL EXPERIENCE: Separate into two categories:
+    PROFESSIONAL EXPERIENCE: Separate into:
     1. Work Experience: Employment, internships, freelance work (paid positions)
     2. Other Experience: Projects, volunteer work, research, academic projects, open-source contributions, hackathons, side projects
     
+    YEARS OF EXPERIENCE CALCULATION - CRITICAL:
+    Calculate WORK YOE accurately by:
+    1. Identify ONLY paid work: employment, internships, freelance jobs
+    2. For each job, calculate duration in years (end date - start date)
+    3. Sum all work durations
+    4. If jobs overlap in time, count the overlapping period only ONCE
+    5. Do NOT count: projects, volunteer work, education, unemployment gaps
+    6. Be conservative - when in doubt, use the lower estimate
+    7. Cap final result at 8.0 years maximum
+    
+    - workYOE: Total years of paid work experience (be precise, not inflated)
+    - workYOECalculation: Show each job's duration calculation step-by-step
+    - totalYOEIncludingProjects: Add project experience using conversions (6+ months = 1.0x, 2-6 months = 0.5x, <2 months = 0.1x)
+    - excludedGaps: List unemployment periods that were excluded
+    
     SKILLS: Extract all skills, tools, and competencies mentioned:
-    - technicalSkills: Any tools, software, technologies, programming languages, platforms, equipment, instruments, systems (e.g., Python, Excel, Photoshop, AutoCAD, Salesforce, microscopes, laboratory equipment)
-    - professionalSkills: Work-related competencies and abilities (e.g., project management, data analysis, customer service, financial modeling, research, teaching)
-    - industrySkills: Domain-specific knowledge and expertise (e.g., healthcare regulations, financial markets, manufacturing processes, legal procedures)
+    - technicalSkills: Any tools, software, technologies, programming languages, platforms, equipment, instruments, systems
+    - professionalSkills: Work-related competencies and abilities
+    - industrySkills: Domain-specific knowledge and expertise
     
     Be thorough and capture ALL experience types with specific skills and tools mentioned.
     """
     
     // JOB DESCRIPTION CLEANING PROMPT
     static let jobCleaningPrompt = """
-    You are a professional document processor. Extract and structure job posting data into a CleanedJobDescription format.
+    Extract job posting data into CleanedJobDescription format.
     
     For requiredSkills and preferredSkills, extract all skills mentioned:
-    - technicalSkills: Any tools, software, technologies, equipment, systems mentioned (e.g., Python, Excel, Salesforce, AutoCAD, medical equipment, laboratory instruments)
-    - professionalSkills: Work competencies and abilities (e.g., project management, data analysis, customer service, teaching, research)
-    - industrySkills: Domain-specific knowledge (e.g., healthcare compliance, financial regulations, manufacturing processes)
+    - technicalSkills: Any tools, software, technologies, equipment, systems mentioned
+    - professionalSkills: Work competencies and abilities
+    - industrySkills: Domain-specific knowledge
     
-    Separate into required vs preferred based on language like:
+    Separate into required vs preferred based on language:
     - Required: "must have", "required", "essential", "mandatory"
     - Preferred: "nice to have", "preferred", "bonus", "plus", "desired"
     
     Extract all skills, tools, and competencies for the role.
     """
     
-    // Individual evaluation prompts for 4-round assessment
-    static let yearsEvaluationPrompt = """
-    Evaluate ONLY Years of Experience:
-    
-    **Why they fit:** [List relevant experience from resume]
-    **Why they don't fit:** [Experience gaps, if any]
-    **Fit Score:** [0-3]
-    **Gap Score:** [0-3]
-    
-    FIT SCORING: 0=None, 1=Some, 2=Good, 3=Strong
-    
-    GAP SCORING (IMPORTANT - HIGHER SCORE = BETTER):
-    0 = MAJOR gaps (significant deficiencies, many missing requirements)
-    1 = MODERATE gaps (some concerns that need attention)
-    2 = MINOR gaps (small concerns but manageable)
-    3 = NO gaps (fully meets all requirements)
-    
-    Example: If candidate perfectly matches all requirements, give Gap Score: 3
-    """
-    
-    static let educationEvaluationPrompt = """
-    Evaluate ONLY Education:
-    
-    **Why they fit:** [Degrees and relevance to job]
-    **Why they don't fit:** [Educational gaps, if any]
-    **Fit Score:** [0-3]
-    **Gap Score:** [0-3]
-    
-    FIT SCORING: 0=None, 1=Some, 2=Good, 3=Strong
-    
-    GAP SCORING (IMPORTANT - HIGHER SCORE = BETTER):
-    0 = MAJOR gaps (significant deficiencies, many missing requirements)
-    1 = MODERATE gaps (some concerns that need attention)
-    2 = MINOR gaps (small concerns but manageable)
-    3 = NO gaps (fully meets all requirements)
-    
-    Example: If candidate perfectly matches all requirements, give Gap Score: 3
-    """
-    
-    static let technicalSkillsEvaluationPrompt = """
-    Evaluate ONLY Technical Skills:
-    
-    **Why they fit:** [Technical skills that match requirements]
-    **Why they don't fit:** [Missing technical skills, if any]
-    **Fit Score:** [0-3]
-    **Gap Score:** [0-3]
-    
-    FIT SCORING: 0=None, 1=Some, 2=Good, 3=Strong
-    
-    GAP SCORING (IMPORTANT - HIGHER SCORE = BETTER):
-    0 = MAJOR gaps (significant deficiencies, many missing requirements)
-    1 = MODERATE gaps (some concerns that need attention)
-    2 = MINOR gaps (small concerns but manageable)
-    3 = NO gaps (fully meets all requirements)
-    
-    Example: If candidate perfectly matches all requirements, give Gap Score: 3
-    """
-    
-    static let relevantExperienceEvaluationPrompt = """
-    Evaluate ONLY Relevant Experience:
-    
-    **Why they fit:** [Industry/role experience that aligns]
-    **Why they don't fit:** [Relevant experience gaps, if any]
-    **Fit Score:** [0-3]
-    **Gap Score:** [0-3]
-    
-    FIT SCORING: 0=None, 1=Some, 2=Good, 3=Strong
-    
-    GAP SCORING (IMPORTANT - HIGHER SCORE = BETTER):
-    0 = MAJOR gaps (significant deficiencies, many missing requirements)
-    1 = MODERATE gaps (some concerns that need attention)
-    2 = MINOR gaps (small concerns but manageable)
-    3 = NO gaps (fully meets all requirements)
-    
-    Example: If candidate perfectly matches all requirements, give Gap Score: 3
-    """
+    // (Legacy 4-round section prompts removed)
     
     // Helper function for Guided Generation
     static func createCleaningPrompt(text: String, isResume: Bool) -> String {
@@ -234,102 +81,66 @@ extension PromptTemplates {
         """
     }
     
-    // MARK: - Single Run Comprehensive Evaluation
-    static let comprehensiveEvaluationPrompt = """
-    Evaluate this candidate comprehensively in a single analysis.
+    // (Legacy single-run comprehensive evaluation prompts removed)
     
-    JOB DESCRIPTION:
-    {jobDescription}
+    // (Legacy per-criterion creators removed)
+}
+
+// Legacy 4-variable system removed - now using unified 5-variable system
+
+// MARK: - New 5-variable System Prompts
+extension PromptTemplates {
     
-    RESUME:
-    {resume}
-    
-    SCORING SYSTEM (READ THIS FIRST):
-    - Fit Score: 0=None, 1=Some, 2=Good, 3=Strong
-    - Gap Score: 0=Major gaps, 1=Moderate gaps, 2=Minor gaps, 3=No gaps
-    - Higher Gap Score = Better (fewer gaps)
-    
-    FIT SCORING: 0=None, 1=Some, 2=Good, 3=Strong
-    
-    GAP SCORING (IMPORTANT - HIGHER SCORE = BETTER):
-    0 = MAJOR gaps (significant deficiencies, many missing requirements)
-    1 = MODERATE gaps (some concerns that need attention)
-    2 = MINOR gaps (small concerns but manageable)
-    3 = NO gaps (fully meets all requirements)
-    
-    Example: If candidate perfectly matches all requirements, give Gap Score: 3
-    
-    Provide scores for ALL criteria in this exact format:
-    
-    IMPORTANT: Use the exact format below with **bold labels** and [bracketed placeholders].
-    
-    ## YEARS OF EXPERIENCE EVALUATION
-    **Why they fit:** [List relevant experience from resume]
-    **Why they don't fit:** [Experience gaps, if any]
-    **Fit Score:** [0-3]
-    **Gap Score:** [0-3]
-    
-    Evaluate ONLY Years of Experience using the scoring system above.
-    
-    ## EDUCATION EVALUATION  
-    **Why they fit:** [Degrees and relevance to job]
-    **Why they don't fit:** [Educational gaps, if any]
-    **Fit Score:** [0-3]
-    **Gap Score:** [0-3]
-    
-    Evaluate ONLY Education using the scoring system above.
-    
-    ## TECHNICAL SKILLS EVALUATION
-    **Why they fit:** [Technical skills that match requirements]
-    **Why they don't fit:** [Missing technical skills, if any]
-    **Fit Score:** [0-3]
-    **Gap Score:** [0-3]
-    
-    Evaluate ONLY Technical Skills using the scoring system above.
-    
-    ## RELEVANT EXPERIENCE EVALUATION
-    **Why they fit:** [Industry/role experience that aligns]
-    **Why they don't fit:** [Relevant experience gaps, if any]
-    **Fit Score:** [0-3]
-    **Gap Score:** [0-3]
-    
-    Evaluate ONLY Relevant Experience using the scoring system above.
-    
-    ## FINAL SUMMARY
-    **Overall Fit Score:** [0-3]
-    **Overall Gap Score:** [0-3]
-    **Recommendation:** [Brief summary of candidate fit]
-    
-    Be specific and cite evidence from both documents.
+    /// Single-round LLM evaluation for all 3 scoring dimensions
+    static let fiveVariableLLMSystemPrompt = """
+    Rate candidate on 3 dimensions (0-4 scale):
+
+    ExpScore: Experience relevance to job's core tasks
+    - 0: No relevant experience, 1: Minimal relevance, 2: Moderate relevance, 3: Strong relevance, 4: Excellent relevance
+
+    EduScore: Education relevance to job requirements  
+    - 0: No relevant education, 1: Some relevant coursework, 2: Related degree, 3: Required degree, 4: Advanced degree
+
+    SkillScore: Overall proficiency in required skills
+    - 0: Missing critical skills, 1: Some skills with gaps, 2: Meets basic requirements, 3: Strong match, 4: Excellent coverage
+
+    Focus on RELEVANCE and QUALITY. Provide concise rationales (max 2-3 lines each).
     """
     
-    static func createComprehensiveEvaluationPrompt(cleanedResume: String, cleanedJob: String) -> String {
-        return comprehensiveEvaluationPrompt
-            .replacingOccurrences(of: "{resume}", with: cleanedResume)
-            .replacingOccurrences(of: "{jobDescription}", with: cleanedJob)
-    }
-    
-    static func createYearsEvaluationPrompt(cleanedResume: String, cleanedJob: String) -> String {
+    static func createFiveVariableLLMPrompt(resume: String, job: String) -> String {
         return """
-        JOB:\n\(cleanedJob)\n\nRESUME:\n\(cleanedResume)\n\nEvaluate years of experience only.
+        === JOB DESCRIPTION ===
+        \(job)
+
+        === RESUME ===
+        \(resume)
         """
     }
     
-    static func createEducationEvaluationPrompt(cleanedResume: String, cleanedJob: String) -> String {
-        return """
-        JOB:\n\(cleanedJob)\n\nRESUME:\n\(cleanedResume)\n\nEvaluate education only.
-        """
-    }
+    /// Resume parsing for actual YOE extraction
+    static let resumeYOEParsingSystemPrompt = """
+    You are an expert resume parser. Extract and calculate total relevant years of experience from the resume.
+
+    CALCULATION RULES:
+    1. Extract work experience sections
+    2. Calculate total relevant years (avoid double-counting overlaps)
+    3. Include project experience using standard conversion:
+       - Major projects (6+ months): count as work experience
+       - Moderate projects (2-6 months): count as 0.5x
+       - Minor projects (<2 months): count as 0.1x
+    4. Cap at 8.0 years maximum
+    5. Return confidence score (0-1) for validation
+    6. Provide brief explanation of calculation
+
+    Be systematic and thorough in your analysis.
+    """
     
-    static func createTechnicalSkillsEvaluationPrompt(cleanedResume: String, cleanedJob: String) -> String {
+    static func createResumeYOEParsingPrompt(resume: String) -> String {
         return """
-        JOB:\n\(cleanedJob)\n\nRESUME:\n\(cleanedResume)\n\nEvaluate technical skills only.
-        """
-    }
-    
-    static func createRelevantExperienceEvaluationPrompt(cleanedResume: String, cleanedJob: String) -> String {
-        return """
-        JOB:\n\(cleanedJob)\n\nRESUME:\n\(cleanedResume)\n\nEvaluate relevant experience only.
+        === RESUME ===
+        \(resume)
+        
+        Parse this resume and calculate the total relevant years of experience.
         """
     }
 }

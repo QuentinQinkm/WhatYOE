@@ -19,11 +19,11 @@ public struct AppColors {
     
     // Helper function to get color by score
     public static func colorForScore(_ score: Double) -> Color {
-        if score >= 2.7 {
+        if score >= 93 {
             return goodGreen
-        } else if score >= 2.0 {
+        } else if score >= 85 {
             return maybeYellow
-        } else if score >= 1.3 {
+        } else if score >= 75 {
             return poorRed
         } else {
             return rejectedBlack
@@ -32,14 +32,14 @@ public struct AppColors {
     
     // Helper function to get category name by score
     public static func categoryForScore(_ score: Double) -> String {
-        if score >= 2.7 {
+        if score >= 93 {
             return "Good"
-        } else if score >= 2.0 {
+        } else if score >= 85 {
             return "Maybe"
-        } else if score >= 1.3 {
+        } else if score >= 75 {
             return "Poor"
         } else {
-            return "Rejected"
+            return "Denied"
         }
     }
 }

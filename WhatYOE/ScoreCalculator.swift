@@ -8,202 +8,189 @@
 import Foundation
 
 struct ScoreCalculator {
-    // MARK: - Configuration
-    static let fitMultiplier: Double = 1.8   // Give more weight to fit scores
-    static let gapMultiplier: Double = 0.5   // Slightly reduce gap score impact
+    // (Legacy fit/gap-based scoring removed)
+}
+
+// MARK: - 5-variable Scoring System (current active system)
+
+struct ScoringComponents {
+    let f_YOE: Double        // YOE factor (capped at 1.0)
+    let S_exp: Double        // Experience score
+    let w_edu: Double        // Education weight
+    let S_edu: Double        // Education score  
+    let S_base: Double       // Base weighted score
+    let M_skill: Double      // Skills multiplier
+    let S_final: Double      // Final score (0-1)
+}
+
+struct ScoringParameters {
+    let H: Double            // Education decay smoothing (default: 5.0)
+    let epsilon: Double      // Division by zero prevention (default: 0.01)
+    let f_YOE_cap: Double    // Experience factor cap (fixed: 1.0)
     
-    // MARK: - Score Calculation
-    static func calculateFinalScore(fitScores: [Double], gapScores: [Double]) -> Double {
-        guard !fitScores.isEmpty && !gapScores.isEmpty else {
-            return 0.0
+    static let `default` = ScoringParameters(H: 5.0, epsilon: 0.01, f_YOE_cap: 1.5)
+}
+
+struct FiveVariableScoringResult {
+    let score: Double              // 0-1 scale
+    let score_percentage: Int      // 0-100 scale  
+    let components: ScoringComponents
+    let inputs: ScoringInputs
+    let success: Bool
+    let error: String?
+}
+
+struct ScoringInputs {
+    let actual_yoe: Double      // From resume parsing (0-8)
+    let required_yoe: Double    // From job parsing (0-8)
+    let exp_score: Int          // From LLM (0-4)
+    let edu_score: Int          // From LLM (0-4)
+    let skill_score: Int        // From LLM (0-4)
+}
+
+extension Double {
+    func map(from: ClosedRange<Double>, to: ClosedRange<Double>) -> Double {
+        let fromRange = from.upperBound - from.lowerBound
+        let toRange = to.upperBound - to.lowerBound
+        let normalized = (self - from.lowerBound) / fromRange
+        return to.lowerBound + (normalized * toRange)
+    }
+}
+
+extension ScoreCalculator {
+    // MARK: - 5-variable scoring system
+    static func validateInputs(
+        actualYOE: Double,
+        requiredYOE: Double, 
+        expScore: Int,
+        eduScore: Int,
+        skillScore: Int
+    ) throws {
+        // Range validations
+        if actualYOE < 0 || actualYOE > 8 {
+            throw NSError(domain: "ScoringError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid actualYOE: \(actualYOE). Must be 0-8."])
         }
         
-        let fitSum = fitScores.reduce(0.0, +)
-        let gapSum = gapScores.reduce(0.0, +)
-        let totalScores = Double(fitScores.count + gapScores.count)
-        
-        let finalScore = (fitSum * fitMultiplier + gapSum * gapMultiplier) / totalScores
-        return finalScore
-    }
-    
-    // Convenience method for integer arrays (from extension)
-    static func calculateFinalScore(fitScores: [Int], gapScores: [Int]) -> Double {
-        let doubleFitScores = fitScores.map { Double($0) }
-        let doubleGapScores = gapScores.map { Double($0) }
-        return calculateFinalScore(fitScores: doubleFitScores, gapScores: doubleGapScores)
-    }
-    
-    // MARK: - Rating Scale (Updated to match user requirements)
-    static func getRating(for finalScore: Double) -> String {
-        switch finalScore {
-        case 0.0..<1.3:
-            return "Reject"
-        case 1.3..<2.0:
-            return "Poor"
-        case 2.0..<2.7:
-            return "Maybe"
-        case 2.7...4.0:
-            return "Good"
-        default:
-            return "Unknown"
-        }
-    }
-    
-    static func getRecommendation(for finalScore: Double) -> String {
-        switch finalScore {
-        case 0.0..<1.3:
-            return "❌ Reject - Candidate does not meet minimum requirements"
-        case 1.3..<2.0:
-            return "📉 Poor - Significant gaps in qualifications"
-        case 2.0..<2.7:
-            return "⚠️ Maybe - Mixed qualifications, proceed with caution"
-        case 2.7...4.0:
-            return "✅ Good - Candidate meets most requirements and is qualified"
-        default:
-            return "❓ Unknown - Score out of expected range"
-        }
-    }
-    
-    // MARK: - Score Extraction (Centralized)
-    
-    /// Extract all scores from evaluation results
-    static func extractAllScores(from results: [String]) -> (fitScores: [Double], gapScores: [Double]) {
-        var fitScores: [Double] = []
-        var gapScores: [Double] = []
-        
-        for result in results {
-            let fitScore = extractScore(from: result, type: "Fit Score")
-            let gapScore = extractScore(from: result, type: "Gap Score")
-            fitScores.append(fitScore)
-            gapScores.append(gapScore)
+        if requiredYOE < 0 || requiredYOE > 8 {
+            throw NSError(domain: "ScoringError", code: 2, userInfo: [NSLocalizedDescriptionKey: "Invalid requiredYOE: \(requiredYOE). Must be 0-8."])
         }
         
-        return (fitScores, gapScores)
-    }
-    
-    /// Extract scores from a specific section
-    static func extractScore(from text: String, type: String, section: String? = nil) -> Double {
-        var searchText = text
-        
-        // If section is specified, find that section first
-        if let section = section {
-            let sectionPattern = "## \\d+\\. \(section.uppercased())"
-            
-            guard let sectionRange = text.range(of: sectionPattern, options: .regularExpression) else {
-                return 0.0
-            }
-            
-            // Get text from section start to next section or end
-            let fromSectionStart = String(text[sectionRange.lowerBound...])
-            let nextSectionPattern = "## \\d+\\."
-            
-            if let nextSectionRange = fromSectionStart.range(of: nextSectionPattern, options: .regularExpression, range: fromSectionStart.index(fromSectionStart.startIndex, offsetBy: 10)..<fromSectionStart.endIndex) {
-                searchText = String(fromSectionStart[..<nextSectionRange.lowerBound])
-            } else {
-                searchText = fromSectionStart
+        // LLM scores must be integers 0-4
+        let scores = [(expScore, "expScore"), (eduScore, "eduScore"), (skillScore, "skillScore")]
+        for (score, name) in scores {
+            if score < 0 || score > 4 {
+                throw NSError(domain: "ScoringError", code: 3, userInfo: [NSLocalizedDescriptionKey: "Invalid \(name): \(score). Must be integer 0-4."])
             }
         }
+    }
+    
+    static func normalizeInputs(
+        actualYOE: Double,
+        requiredYOE: Double,
+        expScore: Int,
+        eduScore: Int,
+        skillScore: Int
+    ) -> ScoringInputs {
+        return ScoringInputs(
+            actual_yoe: max(0, min(8, actualYOE)),
+            required_yoe: max(0, min(8, requiredYOE)),
+            exp_score: max(0, min(4, expScore)),
+            edu_score: max(0, min(4, eduScore)),
+            skill_score: max(0, min(4, skillScore))
+        )
+    }
+    
+    static func computeCandidateScore(
+        actualYOE: Double,      // From resume parsing
+        requiredYOE: Double,    // From job parsing  
+        expScore: Int,          // From LLM (0-4)
+        eduScore: Int,          // From LLM (0-4)
+        skillScore: Int,        // From LLM (0-4)
+        params: ScoringParameters = .default
+    ) -> FiveVariableScoringResult {
         
-        // Look for the score within the text
-        let patterns = [
-            "\\*\\*\(type):\\*\\*\\s*([0-9]+(?:\\.\\d+)?)",
-            "\\*\\*\(type.lowercased()):\\*\\*\\s*([0-9]+(?:\\.\\d+)?)",
-            "\(type):\\s*([0-9]+(?:\\.\\d+)?)",
-            "\(type.lowercased()):\\s*([0-9]+(?:\\.\\d+)?)"
-        ]
-        
-        for pattern in patterns {
-            do {
-                let regex = try NSRegularExpression(pattern: pattern, options: .caseInsensitive)
-                let range = NSRange(location: 0, length: searchText.utf16.count)
-                
-                if let match = regex.firstMatch(in: searchText, range: range) {
-                    let scoreRange = match.range(at: 1)
-                    if let range = Range(scoreRange, in: searchText) {
-                        let scoreString = String(searchText[range])
-                        if let score = Double(scoreString) {
-                            return score
-                        }
-                    }
-                }
+        do {
+            // Validate inputs
+            try validateInputs(
+                actualYOE: actualYOE,
+                requiredYOE: requiredYOE,
+                expScore: expScore,
+                eduScore: eduScore,
+                skillScore: skillScore
+            )
+            
+            // Normalize inputs
+            let inputs = normalizeInputs(
+                actualYOE: actualYOE,
+                requiredYOE: requiredYOE,
+                expScore: expScore,
+                eduScore: eduScore,
+                skillScore: skillScore
+            )
+            
+            // 1. YOE Factor (with cap at 1.5)
+            let f_YOE = min(
+                params.f_YOE_cap, 
+                sqrt(inputs.actual_yoe / (inputs.required_yoe + params.epsilon))
+            )
+            
+            // 2. Experience Score (mapped to 0.2-1.15 range)
+            let raw_exp = sqrt(Double(inputs.exp_score)) * f_YOE
+            let S_exp = raw_exp.map(from: 0...3.0, to: 0.2...1.151)
+            
+            // 3. Education Weight (mapped to 0.1-0.7 range)
+            let raw_w_edu = 1.0 / (1.0 + pow(inputs.required_yoe / params.H, 2))
+            let w_edu = raw_w_edu.map(from: 0.28...1.0, to: 0.1...0.7)
+            
+            // 4. Education Score (mapped to 0.2-1.15 range)
+            let raw_edu = sqrt(Double(inputs.edu_score))
+            let S_edu = raw_edu.map(from: 0...2.0, to: 0.2...1.15)
+            
+            // 5. Base Score (weighted combination)
+            let S_base = (1.0 - w_edu) * S_exp + w_edu * S_edu
+            
+            // 6. Skills Multiplier (penalty-only, fixed formula)
+            let M_skill = 0.5 + 0.5 * (Double(inputs.skill_score) / 4.0)
+            
+            // 7. Final Score (mapped to 0-100 range)
+            let raw_final = S_base * M_skill
+            let S_final = max(0.0, min(1.0, raw_final))
+            
+            let components = ScoringComponents(
+                f_YOE: f_YOE,
+                S_exp: S_exp,
+                w_edu: w_edu,
+                S_edu: S_edu,
+                S_base: S_base,
+                M_skill: M_skill,
+                S_final: S_final
+            )
+            
+            return FiveVariableScoringResult(
+                score: S_final,
+                score_percentage: Int((S_final * 100.0).rounded()),
+                components: components,
+                inputs: inputs,
+                success: true,
+                error: nil
+            )
+            
             } catch {
-                continue
-            }
+            return FiveVariableScoringResult(
+                score: 0,
+                score_percentage: 0,
+                components: ScoringComponents(f_YOE: 0, S_exp: 0, w_edu: 0, S_edu: 0, S_base: 0, M_skill: 0, S_final: 0),
+                inputs: ScoringInputs(actual_yoe: 0, required_yoe: 0, exp_score: 0, edu_score: 0, skill_score: 0),
+                success: false,
+                error: error.localizedDescription
+            )
         }
-        
-        return 0.0
     }
     
-    /// Extract final score from analysis results
-    static func extractFinalScore(from text: String) -> Double {
-        let patterns = [
-            "\\*\\*Final Score:\\*\\*\\s*([0-9]+(?:\\.\\d+)?)",
-            "Final Score:\\s*([0-9]+(?:\\.\\d+)?)",
-            "\\*\\*final score:\\*\\*\\s*([0-9]+(?:\\.\\d+)?)",
-            "final score:\\s*([0-9]+(?:\\.\\d+)?)"
-        ]
-        
-        for pattern in patterns {
-            do {
-                let regex = try NSRegularExpression(pattern: pattern, options: .caseInsensitive)
-                let range = NSRange(location: 0, length: text.utf16.count)
-                
-                if let match = regex.firstMatch(in: text, range: range) {
-                    let scoreRange = match.range(at: 1)
-                    if let range = Range(scoreRange, in: text) {
-                        let scoreString = String(text[range])
-                        if let score = Double(scoreString) {
-                            return score
-                        }
-                    }
-                }
-            } catch {
-                continue
-            }
-        }
-        
-        return 0.0
-    }
-    
-    // MARK: - Analysis Result Processing
-    
-    /// Process evaluation results and return formatted output with scores
-    static func processEvaluationResults(results: [String]) -> (formattedOutput: String, fitScores: [Double], gapScores: [Double], finalScore: Double) {
-        let yearsResult = results[0]
-        let educationResult = results[1]
-        let skillsResult = results[2]
-        let experienceResult = results[3]
-        
-        let (fitScores, gapScores) = extractAllScores(from: results)
-        let finalScore = calculateFinalScore(fitScores: fitScores, gapScores: gapScores)
-        
-        let totalFitScore = fitScores.reduce(0.0, +)
-        let totalGapScore = gapScores.reduce(0.0, +)
-        
-        let formattedOutput = """
-        # EVALUATION RESULTS
-        
-        ## 1. YEARS OF EXPERIENCE
-        \(yearsResult)
-        
-        ## 2. EDUCATION
-        \(educationResult)
-        
-        ## 3. TECHNICAL SKILLS
-        \(skillsResult)
-        
-        ## 4. RELEVANT EXPERIENCE
-        \(experienceResult)
-        
-        ## FINAL SCORE
-        **Total Fit Score:** \(String(format: "%.1f", totalFitScore)) / 12
-        **Total Gap Score:** \(String(format: "%.1f", totalGapScore)) / 12
-        **Final Score:** \(String(format: "%.1f", finalScore)) (0-3 scale)
-        
-        ## RECOMMENDATION
-        \(getRecommendation(for: finalScore))
-        """
-        
-        return (formattedOutput, fitScores, gapScores, finalScore)
+    static func specRating(for scorePct: Int) -> String {
+        if scorePct < 75 { return "Denied" }
+        if scorePct < 85 { return "Poor" }
+        if scorePct < 93 { return "Maybe" }
+        return "Good"
     }
 }

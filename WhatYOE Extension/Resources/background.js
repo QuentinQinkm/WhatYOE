@@ -46,26 +46,14 @@ async function startFourCycleAnalysis(data, sendResponse) {
             data: data
         });
         
-        // Log the 8 scores if available
+        // Log final 0–100 score if available (fit/gap deprecated)
         if (response && response.scores) {
-            const { fitScores, gapScores, finalScore } = response.scores;
-            console.log("📊 [BACKGROUND] Analysis Scores Breakdown for Job:", jobId);
-            console.log("   📈 Fit Scores (YOE, Education, Skills, Experience):", fitScores);
-            console.log("   📉 Gap Scores (YOE, Education, Skills, Experience):", gapScores);
-            console.log("   🎯 Final Score:", finalScore);
-            const fitSum = fitScores?.reduce((a,b) => a+b, 0) || 0;
-            const gapSum = gapScores?.reduce((a,b) => a+b, 0) || 0;
-            const totalScores = (fitScores?.length || 0) + (gapScores?.length || 0);
-            const fitMultiplier = 1.2;
-            const gapMultiplier = 0.95;
-            const expectedCalculation = (fitSum * fitMultiplier + gapSum * gapMultiplier) / totalScores;
-            console.log("   🧮 Calculation: (Fit sum: " + fitSum + " × " + fitMultiplier + " + Gap sum: " + gapSum + " × " + gapMultiplier + ") / " + totalScores + " = " + expectedCalculation.toFixed(3) + " (actual: " + finalScore + ")");
+            const { finalScore } = response.scores;
+            console.log("📊 [BACKGROUND] Final Score (0–100) for Job:", jobId, finalScore);
         } else {
             console.log("⚠️ [BACKGROUND] No scores found for Job:", jobId);
             console.log("🔍 [BACKGROUND] Response structure:", response);
             console.log("🔍 [BACKGROUND] Response keys:", response ? Object.keys(response) : "No response");
-            
-            // Don't fall back to old scores for new jobs - this prevents score contamination
             console.log("ℹ️ [BACKGROUND] No fallback to old scores - waiting for fresh analysis results");
         }
         

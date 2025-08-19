@@ -21,6 +21,9 @@ struct CleanedResume {
     @Guide(description: "Professional experience including work and other relevant experience")
     let professionalExperience: ProfessionalExperience
     
+    @Guide(description: "Years of experience calculation - WORK ONLY")
+    let yearsOfExperience: YearsOfExperienceCalculation
+    
     @Guide(description: "Educational background with degrees, institutions, and dates")
     let education: [Education]
     
@@ -114,6 +117,21 @@ struct Education {
 
 
 @Generable
+struct YearsOfExperienceCalculation {
+    @Guide(description: "Final work YOE = Paid Work YOE + (Project YOE / 2). Calculate paid work precisely, add half of project experience.")
+    let workYOE: Double
+    
+    @Guide(description: "Step-by-step calculation: 'Paid Work: Job A (2.0 years) + Job B (0.5 years) = 2.5 years. Projects: Project A (1.0 year) + Project B (0.5 years) = 1.5 years. Final: 2.5 + (1.5/2) = 3.25 years'")
+    let workYOECalculation: String
+    
+    @Guide(description: "Total including full project experience (before dividing by 2)")
+    let totalYOEIncludingProjects: Double
+    
+    @Guide(description: "List of unemployment/gap periods that were excluded from calculation")
+    let excludedGaps: [String]
+}
+
+@Generable
 struct Skills {
     @Guide(description: "All technical skills, tools, software, and technologies mentioned")
     let technicalSkills: [String]
@@ -125,6 +143,22 @@ struct Skills {
     let industrySkills: [String]
 }
 
+// MARK: - Multi-Step Extraction Structures
+
+@Generable
+struct ContactAndSummaryExtraction {
+    @Guide(description: "Contact information extracted from resume")
+    let contactInfo: ContactInfo
+    
+    @Guide(description: "Professional summary or objective statement if present")
+    let summary: String?
+}
+
+@Generable
+struct EducationExtraction {
+    @Guide(description: "All education entries found in the resume")
+    let education: [Education]
+}
 
 // MARK: - Job Description Structures
 
