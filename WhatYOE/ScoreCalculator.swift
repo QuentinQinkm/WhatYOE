@@ -28,7 +28,7 @@ struct ScoringParameters {
     let epsilon: Double      // Division by zero prevention (default: 0.01)
     let f_YOE_cap: Double    // Experience factor cap (fixed: 1.0)
     
-    static let `default` = ScoringParameters(H: 5.0, epsilon: 0.01, f_YOE_cap: 1.5)
+    static let `default` = ScoringParameters(H: 5.5, epsilon: 0.01, f_YOE_cap: 1.5)
 }
 
 struct FiveVariableScoringResult {
@@ -144,7 +144,7 @@ extension ScoreCalculator {
             
             // 4. Education Score (mapped to 0.2-1.15 range)
             let raw_edu = sqrt(Double(inputs.edu_score))
-            let S_edu = raw_edu.map(from: 0...2.0, to: 0.2...1.15)
+            let S_edu = raw_edu.map(from: 0...2.44, to: 0.2...1.15)
             
             // 5. Base Score (weighted combination)
             let S_base = (1.0 - w_edu) * S_exp + w_edu * S_edu
