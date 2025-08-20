@@ -136,7 +136,7 @@ extension ScoreCalculator {
             
             // 2. Experience Score (mapped to 0.2-1.15 range)
             let raw_exp = sqrt(Double(inputs.exp_score)) * f_YOE
-            let S_exp = raw_exp.map(from: 0...3.0, to: 0.2...1.151)
+            let S_exp = raw_exp.map(from: 0...3.0, to: 0.2...1.05)
             
             // 3. Education Weight (mapped to 0.1-0.7 range)
             let raw_w_edu = 1.0 / (1.0 + pow(inputs.required_yoe / params.H, 2))
@@ -144,7 +144,7 @@ extension ScoreCalculator {
             
             // 4. Education Score (mapped to 0.2-1.15 range)
             let raw_edu = sqrt(Double(inputs.edu_score))
-            let S_edu = raw_edu.map(from: 0...2.44, to: 0.2...1.15)
+            let S_edu = raw_edu.map(from: 0...2.44, to: 0.2...1.05)
             
             // 5. Base Score (weighted combination)
             let S_base = (1.0 - w_edu) * S_exp + w_edu * S_edu

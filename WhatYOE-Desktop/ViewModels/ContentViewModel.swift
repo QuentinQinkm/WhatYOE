@@ -107,18 +107,37 @@ class ContentViewModel: ObservableObject {
     }
     
     func loadJobs() {
+        print("📋 [Desktop ContentViewModel] Starting loadJobs()")
+        
+        let loadedJobs: [JobItem]
         if let selectedResumeId = selectedResumeIdForJobs {
-            jobs = jobManager.getJobsForResume(resumeId: selectedResumeId)
-            print("🔍 [Desktop] Loading jobs for resume: \(selectedResumeId), found: \(jobs.count)")
+            loadedJobs = jobManager.getJobsForResume(resumeId: selectedResumeId)
+            print("🔍 [Desktop ContentViewModel] Loading jobs for resume: \(selectedResumeId), found: \(loadedJobs.count)")
         } else {
-            jobs = jobManager.getAllJobs()
-            print("🔍 [Desktop] Loading all jobs, found: \(jobs.count)")
+            loadedJobs = jobManager.getAllJobs()
+            print("🔍 [Desktop ContentViewModel] Loading all jobs, found: \(loadedJobs.count)")
         }
         
-        lastJobCount = jobs.count
+        // Debug: Print detailed info about loaded jobs
+        for (index, job) in loadedJobs.enumerated() {
+            print("📋 [Desktop ContentViewModel] Job \(index + 1): \(job.jobTitle) at \(job.company) (Score: \(job.analysisScores.finalScore))")
+        }
         
-        if selectedJob == nil && !jobs.isEmpty {
-            selectedJob = jobs.first
+        // Force UI update by explicitly setting the published property
+        DispatchQueue.main.async { [weak self] in
+            self?.jobs = loadedJobs
+            self?.lastJobCount = loadedJobs.count
+            
+            print("📋 [Desktop ContentViewModel] Assigned \(loadedJobs.count) jobs to @Published property on main queue")
+            
+            if self?.selectedJob == nil && !loadedJobs.isEmpty {
+                self?.selectedJob = loadedJobs.first
+                print("📋 [Desktop ContentViewModel] Set selectedJob to: \(loadedJobs.first?.jobTitle ?? "nil")")
+            }
+            
+            // Force UI refresh by triggering objectWillChange
+            self?.objectWillChange.send()
+            print("📋 [Desktop ContentViewModel] Sent objectWillChange notification")
         }
     }
     
@@ -227,7 +246,12 @@ class ContentViewModel: ObservableObject {
     func getLabelText() -> String {
         switch selectedTab {
         case 0:
-            return selectedJob != nil ? "Job Analysis Report" : ""
+            if let selectedJob = selectedJob {
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateStyle = .short
+                return "Analyzed: \(dateFormatter.string(from: selectedJob.dateAnalyzed))   Job ID: \(selectedJob.jobId)"
+            }
+            return ""
         case 1:
             return pendingResumeData != nil ? "Raw Resume Content" : (selectedResume != nil ? "Cleaned Resume Content" : "")
         case 2:

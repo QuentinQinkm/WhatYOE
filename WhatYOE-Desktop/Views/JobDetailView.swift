@@ -8,53 +8,177 @@ struct JobDetailView: View {
     
     var body: some View {
         if let job = job {
-            ResumeContentView(
-                text: formatJobContent(job),
-                bottomLabel: "",
-                horizontalPadding: horizontalPadding,
-                overlayButtons: {
-                    AnyView(
-                        VStack(spacing: 0) {
-                            // Top row - Edit button position  
-                            HStack {
-                                Spacer()
+            ZStack {
+                // Main content with custom layout
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Two-column layout: Job details (left) and Scores/Rationale (right)
+                        HStack(alignment: .top, spacing: 24) {
+                            // Left column: Job details (stretches to fill available space)
+                            VStack(alignment: .leading, spacing: 16) {
+                                // Company name and position section
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(job.company)
+                                        .font(.title2)
+                                        .fontWeight(.light)
+                                        .foregroundColor(.black)
+                                    Text(job.jobTitle)
+                                        .font(.body)
+                                        .fontWeight(.light)
+                                        .foregroundColor(.black)
+                                }
                                 
-                                // Star button (replaces edit position)
-                                GlassIconButton(
-                                    icon: "star",
-                                    color: Color(red: 255/255, green: 193/255, blue: 0/255),
-                                    state: .default,
-                                    action: {
-                                        // Function placeholder - will be added later
-                                        print("Star tapped for job: \(job.jobTitle)")
-                                    }
-                                )
+                                // LinkedIn and Like buttons below title, aligned to the left
+                                HStack(spacing: 12) {
+                                    GlassIconTextButton(
+                                        icon: "link",
+                                        title: "Open in LinkedIn",
+                                        color: Color(red: 0/255, green: 119/255, blue: 181/255),
+                                        state: .default,
+                                        action: {
+                                            openLinkedInJob(jobId: job.jobId)
+                                        }
+                                    )
+                                    
+                                    GlassIconButton(
+                                        icon: "star",
+                                        color: Color(red: 255/255, green: 193/255, blue: 0/255),
+                                        state: .default,
+                                        action: {
+                                            // Function placeholder - will be added later
+                                            print("Star tapped for job: \(job.jobTitle)")
+                                        }
+                                    )
+                                    
+                                    Spacer()
+                                }
+                                
+                                // Job description
+                                VStack(alignment: .leading, spacing: 16) {
+                                    Text(job.cleanedJobDescription)
+                                        .fontWeight(.light)
+                                        .foregroundColor(.black)
+                                        .textSelection(.enabled)
+                                }
                             }
-                            .padding(.bottom, 16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             
-                            Spacer()
-                            
-                            // Bottom row - Cancel/Proceed button positions
-                            HStack {
-                                // Empty space (cancel position)
-                                
-                                Spacer()
-                                
-                                // LinkedIn button with icon + text (replaces proceed position)
-                                GlassIconTextButton(
-                                    icon: "link",
-                                    title: "Open in LinkedIn",
-                                    color: Color(red: 0/255, green: 119/255, blue: 181/255),
-                                    state: .default,
-                                    action: {
-                                        openLinkedInJob(jobId: job.jobId)
+                            // Right column: Scores and Rationale (fixed width)
+                            VStack(alignment: .leading, spacing: 16) {
+                                // Score section - all scores in one HStack
+                                HStack(spacing: 16) {
+                                    // Final score and rating
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("\(String(format: "%.0f", job.analysisScores.finalScore))")
+                                            .font(.largeTitle)
+                                            .fontWeight(.regular)
+                                            .foregroundColor(colorForScore(job.analysisScores.finalScore))
+                                        Text(getRating(for: job.analysisScores.finalScore))
+                                            .font(.system(size: 12))
+                                            .fontWeight(.light)
+                                            .foregroundColor(.black)
                                     }
-                                )
+                                    
+                                    // Required YOE
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Req.")
+                                            .font(.system(size: 12))
+                                            .fontWeight(.light)
+                                            .foregroundColor(.black)
+                                            .opacity(0.7)
+                                        Text("\(String(format: "%.1f", job.analysisScores.required_yoe))y")
+                                            .font(.title2)
+                                            .fontWeight(.light)
+                                            .foregroundColor(.black)
+                                    }
+                                    
+                                    // Actual YOE
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Actual")
+                                            .font(.system(size: 12))
+                                            .fontWeight(.light)
+                                            .foregroundColor(.black)
+                                            .opacity(0.7)
+                                        Text("\(String(format: "%.1f", job.analysisScores.actual_yoe))y")
+                                            .font(.title2)
+                                            .fontWeight(.light)
+                                            .foregroundColor(.black)
+                                    }
+                                    
+                                    // Experience score
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Exp.")
+                                            .font(.system(size: 12))
+                                            .fontWeight(.light)
+                                            .foregroundColor(.black)
+                                            .opacity(0.7)
+                                        Text("\(job.analysisScores.exp_score)/4")
+                                            .font(.title2)
+                                            .fontWeight(.light)
+                                            .foregroundColor(.black)
+                                    }
+                                    
+                                    // Education score
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Edu.")
+                                            .font(.system(size: 12))
+                                            .fontWeight(.light)
+                                            .foregroundColor(.black)
+                                            .opacity(0.7)
+                                        Text("\(job.analysisScores.edu_score)/4")
+                                            .font(.title2)
+                                            .fontWeight(.light)
+                                            .foregroundColor(.black)
+                                    }
+                                    
+                                    // Skill score
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Skills")
+                                            .font(.system(size: 12))
+                                            .fontWeight(.light)
+                                            .foregroundColor(.black)
+                                            .opacity(0.7)
+                                        Text("\(job.analysisScores.skill_score)/4")
+                                            .font(.title2)
+                                            .fontWeight(.light)
+                                            .foregroundColor(.black)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                                
+                                // Divider
+                                Divider()
+                                
+                                // Rationale section
+                                VStack(alignment: .leading, spacing: 16) {
+                                    Text(extractRationales(from: job.analysisResult))
+                                        .fontWeight(.light)
+                                        .foregroundColor(.black)
+                                        .textSelection(.enabled)
+                                }
                             }
+                            .frame(width: 280, alignment: .leading) // Fixed width for right column
                         }
-                    )
+                        .padding(.horizontal, horizontalPadding)
+                        .padding(.top, 16)
+                        .padding(.bottom, 100) // Space for overlay buttons
+                    }
                 }
-            )
+                
+                // Overlay buttons - only star button remains
+                VStack(spacing: 0) {
+                    // Top row - Star button position  
+                    HStack {
+                        Spacer()
+                        
+                        // Star button removed from here since it's now with LinkedIn button
+                    }
+                    .padding(.horizontal, horizontalPadding)
+                    .padding(.top, 16)
+                    
+                    Spacer()
+                }
+            }
         } else {
             VStack(spacing: 16) {
                 Image(systemName: "briefcase")
@@ -76,45 +200,37 @@ struct JobDetailView: View {
         }
     }
     
-    private func formatJobContent(_ job: JobItem) -> String {
-        let score = job.analysisScores.finalScore
-        let rating = getRating(for: score)
-        
-        let rawScoresSection = """
-        📋 **5-Variable Scores:**
-        • **Experience Score:** \(job.analysisScores.exp_score)/4
-        • **Education Score:** \(job.analysisScores.edu_score)/4
-        • **Skills Score:** \(job.analysisScores.skill_score)/4
-        • **Actual YOE:** \(String(format: "%.1f", job.analysisScores.actual_yoe)) years
-        • **Required YOE:** \(String(format: "%.1f", job.analysisScores.required_yoe)) years
-        """
-        
-        return """
-        📊 **Job Analysis Report**
-        
-        🏢 **Company:** \(job.company)
-        💼 **Position:** \(job.jobTitle)
-        🔗 **LinkedIn Job ID:** \(job.jobId)
-        📅 **Analyzed:** \(DateFormatter.shortDate.string(from: job.dateAnalyzed))
-        
-        🎯 **Final Score:** \(String(format: "%.0f", score)) / 100
-        📊 **Rating:** \(rating)
-        
-        \(rawScoresSection)
-        
-        📋 **Detailed Analysis:**
-        \(job.analysisResult)
-        
-        📝 **Job Description:**
-        \(job.cleanedJobDescription)
-        """
-    }
     
     private func getRating(for score: Double) -> String {
-        if score < 75 { return "❌ Denied" }
-        if score < 85 { return "📉 Poor" }
-        if score < 93 { return "⚠️ Maybe" }
-        return "✅ Good"
+        if score < 75 { return "Denied" }
+        if score < 85 { return "Poor" }
+        if score < 93 { return "Maybe" }
+        return "Good"
+    }
+    
+    private func colorForScore(_ score: Double) -> Color {
+        if score < 75 { return AppColors.rejectedBlack }
+        if score < 85 { return AppColors.poorRed }
+        if score < 93 { return AppColors.maybeYellow }
+        return AppColors.goodGreen
+    }
+    
+    private func extractRationales(from analysisResult: String) -> String {
+        // Use regex to find text after "Rationales:"
+        let pattern = "Rationales:\\s*(.*)"
+        
+        if let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]) {
+            let range = NSRange(location: 0, length: analysisResult.utf16.count)
+            if let match = regex.firstMatch(in: analysisResult, options: [], range: range) {
+                let rationalesRange = match.range(at: 1)
+                if let range = Range(rationalesRange, in: analysisResult) {
+                    return String(analysisResult[range]).trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+            }
+        }
+        
+        // Fallback: return the original text if regex fails
+        return analysisResult
     }
     
 

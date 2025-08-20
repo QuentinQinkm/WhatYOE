@@ -1008,10 +1008,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     /// Calculate job-relevant YOE by analyzing resume experience against specific job requirements
     private func calculateJobRelevantYOE(resumeText: String, jobDescription: String) async throws -> Double {
-        let session = LanguageModelSession(instructions: "Calculate job-relevant years of experience. Only count experience that's relevant to this specific job. Work experience gets full credit, other experience (projects, volunteer, research) gets 0.5x credit.")
+        let session = LanguageModelSession(instructions: "Calculate years of experience relevant to the job requirements. Consider both direct experience and transferable skills from related fields.")
         
         let prompt = """
-        Calculate job-relevant YOE for this candidate:
+        Calculate relevant YOE for this job application:
         
         JOB DESCRIPTION:
         \(jobDescription)
@@ -1019,14 +1019,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         RESUME:
         \(resumeText)
         
-        CALCULATION RULES:
-        1. Identify work experience relevant to this job (employment, internships, freelance)
-        2. Identify other relevant experience (projects, volunteer, research, academic work)  
-        3. Calculate: Job-Relevant Work YOE + (Job-Relevant Other YOE × 0.5)
-        4. Only count experience that relates to the job's requirements and responsibilities
-        5. Be conservative - when unsure, don't count the experience
+        CALCULATION GUIDELINES:
+        1. WORK EXPERIENCE (Full Credit):
+           - Direct experience in the same role/field
+           - Similar roles requiring comparable skills
+           - Transferable experience from related industries
+           - Include: employment, internships, freelance, consulting
         
-        Return the final calculated YOE as a number between 0-8 years.
+        2. OTHER RELEVANT EXPERIENCE (0.5x Credit):
+           - Projects demonstrating required skills
+           - Volunteer work using relevant competencies  
+           - Research/academic work with applicable skills
+           - Self-directed learning with practical application
+        
+        3. EVALUATION APPROACH:
+           - Focus on skills and competencies, not just job titles
+           - Consider transferable skills from adjacent fields
+           - Include experience that demonstrates growth in relevant areas
+           - When uncertain, evaluate if skills/achievements apply to job requirements
+        
+        4. FORMULA: Relevant Work YOE + (Relevant Other YOE × 0.5)
+        5. Cap final result at 8.0 years maximum
+        
+        Be thorough but realistic in recognizing relevant experience.
         """
         
         let response = try await session.respond(to: prompt, generating: JobRelevantYOECalculation.self)

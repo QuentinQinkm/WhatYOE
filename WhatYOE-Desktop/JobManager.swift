@@ -97,19 +97,32 @@ class JobManager {
     
     func getAllJobs() -> [JobItem] {
         var allJobs: [JobItem] = []
+        var successCount = 0
+        var failureCount = 0
+        
+        print("📋 [Desktop JobManager] Starting getAllJobs()")
         
         // Get all resume IDs with jobs
         let resumeIds = FileManager.getAllResumeIdsWithJobs()
+        print("📋 [Desktop JobManager] Found \(resumeIds.count) resume directories: \(resumeIds)")
         
         for resumeId in resumeIds {
             let jobIds = FileManager.getJobIds(forResumeId: resumeId)
+            print("📋 [Desktop JobManager] Resume \(resumeId) has \(jobIds.count) job files: \(jobIds)")
             
             for jobId in jobIds {
                 if let job = loadJob(resumeId: resumeId, jobId: jobId) {
                     allJobs.append(job)
+                    successCount += 1
+                    print("✅ [Desktop JobManager] Successfully loaded job: \(job.jobTitle)")
+                } else {
+                    failureCount += 1
+                    print("❌ [Desktop JobManager] Failed to load job: \(resumeId)/\(jobId)")
                 }
             }
         }
+        
+        print("📋 [Desktop JobManager] getAllJobs completed: \(successCount) successful, \(failureCount) failed, total: \(allJobs.count)")
         
         return allJobs.sorted { $0.dateAnalyzed > $1.dateAnalyzed }
     }
@@ -131,10 +144,23 @@ class JobManager {
         
         do {
             let data = try Data(contentsOf: filePath)
+            print("📋 [Desktop] Attempting to decode job file: \(filePath.lastPathComponent), size: \(data.count) bytes")
             let job = try JSONDecoder().decode(JobItem.self, from: data)
+            print("✅ [Desktop] Successfully loaded job: \(job.jobTitle) at \(job.company)")
             return job
         } catch {
-            print("❌ Failed to load job \(resumeId)/\(jobId): \(error)")
+            print("❌ [Desktop] Failed to load job \(resumeId)/\(jobId): \(error)")
+            print("📋 [Desktop] File path: \(filePath.path)")
+            
+            // Try to read raw JSON to see what's in the file
+            do {
+                let errorData = try Data(contentsOf: filePath)
+                if let jsonString = String(data: errorData, encoding: .utf8) {
+                    print("📄 [Desktop] Raw JSON preview: \(String(jsonString.prefix(200)))...")
+                }
+            } catch {
+                print("📄 [Desktop] Could not read file for preview: \(error)")
+            }
             return nil
         }
     }
@@ -143,13 +169,26 @@ class JobManager {
     
     func getJobsForResume(resumeId: String) -> [JobItem] {
         var jobs: [JobItem] = []
+        var successCount = 0
+        var failureCount = 0
+        
+        print("📋 [Desktop JobManager] Starting getJobsForResume(\(resumeId))")
+        
         let jobIds = FileManager.getJobIds(forResumeId: resumeId)
+        print("📋 [Desktop JobManager] Found \(jobIds.count) job files for resume \(resumeId): \(jobIds)")
         
         for jobId in jobIds {
             if let job = loadJob(resumeId: resumeId, jobId: jobId) {
                 jobs.append(job)
+                successCount += 1
+                print("✅ [Desktop JobManager] Successfully loaded job: \(job.jobTitle)")
+            } else {
+                failureCount += 1
+                print("❌ [Desktop JobManager] Failed to load job: \(resumeId)/\(jobId)")
             }
         }
+        
+        print("📋 [Desktop JobManager] getJobsForResume completed: \(successCount) successful, \(failureCount) failed, total: \(jobs.count)")
         
         return jobs.sorted { $0.dateAnalyzed > $1.dateAnalyzed }
     }

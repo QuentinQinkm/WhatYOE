@@ -162,16 +162,16 @@ struct EducationExtraction {
 
 @Generable
 struct JobRelevantYOECalculation {
-    @Guide(description: "Job-relevant years of experience: Work YOE + (Other YOE × 0.5). Only count experience relevant to this specific job.")
+    @Guide(description: "Total relevant years of experience: Work YOE + (Other YOE × 0.5). Consider direct experience and transferable skills from related fields.")
     let actualYOE: Double
     
-    @Guide(description: "Step-by-step explanation: 'Relevant work: 2.0 years (Software Engineer roles). Relevant other: 1.0 years (coding projects). Final: 2.0 + (1.0 × 0.5) = 2.5 years'")
+    @Guide(description: "Detailed calculation breakdown: 'Direct work experience: 2.0 years (Software Engineer + similar roles). Other relevant: 1.5 years (coding projects + research). Final: 2.0 + (1.5 × 0.5) = 2.75 years'")
     let calculation: String
     
-    @Guide(description: "Years of job-relevant work experience (employment, internships, freelance)")
+    @Guide(description: "Years of directly relevant work experience plus transferable experience from related fields (employment, internships, freelance, consulting)")
     let relevantWorkYOE: Double
     
-    @Guide(description: "Years of job-relevant other experience (projects, volunteer, research)")
+    @Guide(description: "Years of other experience demonstrating relevant skills (projects, volunteer work, research, academic work with practical application)")
     let relevantOtherYOE: Double
 }
 

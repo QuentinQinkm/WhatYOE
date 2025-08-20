@@ -51,15 +51,24 @@ struct JobListView: View {
     
     
     private var groupedJobs: [JobGroup] {
+        print("📊 [JobListView] Grouping \(jobs.count) jobs")
+        
         let grouped = Dictionary(grouping: jobs) { job in
-            AppColors.categoryForScore(job.analysisScores.finalScore)
+            let category = AppColors.categoryForScore(job.analysisScores.finalScore)
+            print("📊 [JobListView] Job \(job.jobTitle) (score: \(job.analysisScores.finalScore)) → category: \(category)")
+            return category
+        }
+        
+        print("📊 [JobListView] Grouped categories: \(grouped.keys.sorted())")
+        for (category, categoryJobs) in grouped {
+            print("📊 [JobListView] Category '\(category)': \(categoryJobs.count) jobs")
         }
         
         let groups = [
             JobGroup(category: "Good", color: AppColors.goodGreen, jobs: grouped["Good"] ?? [], sortOrder: 0),
             JobGroup(category: "Maybe", color: AppColors.maybeYellow, jobs: grouped["Maybe"] ?? [], sortOrder: 1),
             JobGroup(category: "Poor", color: AppColors.poorRed, jobs: grouped["Poor"] ?? [], sortOrder: 2),
-            JobGroup(category: "Rejected", color: AppColors.rejectedBlack, jobs: grouped["Rejected"] ?? [], sortOrder: 3)
+            JobGroup(category: "Denied", color: AppColors.rejectedBlack, jobs: grouped["Denied"] ?? [], sortOrder: 3)
         ]
         
         return groups
