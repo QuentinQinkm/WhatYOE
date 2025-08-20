@@ -325,9 +325,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         print("💼 Step 2: Extracting professional experience...")
         let experience = try await extractProfessionalExperience(text)
         
-        // Step 3: Calculate years of experience
-        print("📊 Step 3: Calculating years of experience...")
-        let yoeCalculation = try await calculateYearsOfExperience(text, experience: experience)
+        // Step 3: Skip YOE calculation during cleaning - will be done per job analysis
+        print("📊 Step 3: Skipping YOE calculation (will be done during job analysis)...")
+        let yoeCalculation = YearsOfExperienceCalculation(
+            workYOE: 0.0, // Will be calculated during job analysis
+            workYOECalculation: "YOE calculation deferred to job analysis for job-specific relevance",
+            totalYOEIncludingProjects: 0.0,
+            excludedGaps: []
+        )
         
         // Step 4: Extract education
         print("🎓 Step 4: Extracting education...")
@@ -368,38 +373,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return response.content
     }
     
-    private func calculateYearsOfExperience(_ text: String, experience: ProfessionalExperience) async throws -> YearsOfExperienceCalculation {
-        let session = LanguageModelSession(instructions: "Calculate years of experience in 2 parts: 1) Work YOE from paid positions only 2) Project experience years. Final YOE = Work YOE + (Project YOE / 2). Be precise with calculations.")
-        
-        let workText = experience.workExperience.map { work in
-            "\(work.role) at \(work.company): \(work.startDate) - \(work.endDate ?? "Present")"
-        }.joined(separator: "\n")
-        
-        let projectText = experience.otherExperience.map { other in
-            "\(other.title) (\(other.experienceType)): \(other.startDate ?? "Unknown") - \(other.endDate ?? "Present")"
-        }.joined(separator: "\n")
-        
-        let prompt = """
-        Calculate YOE in 2 steps:
-        
-        STEP 1 - Work Experience (paid positions):
-        \(workText.isEmpty ? "No paid work experience found" : workText)
-        
-        STEP 2 - Project Experience:
-        \(projectText.isEmpty ? "No project experience found" : projectText)
-        
-        FINAL CALCULATION:
-        - Calculate Work YOE precisely (each job duration)
-        - Calculate Project YOE 
-        - Final workYOE = Work YOE + (Project YOE / 2)
-        
-        Original resume for reference:
-        \(text)
-        """
-        
-        let response = try await session.respond(to: prompt, generating: YearsOfExperienceCalculation.self)
-        return response.content
-    }
     
     private func extractEducation(_ text: String) async throws -> [Education] {
         let session = LanguageModelSession(instructions: "Extract education information including degrees, institutions, fields of study, and graduation years. Only extract what's clearly stated.")
@@ -843,9 +816,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // Step 1: Parse required YOE from job description (using existing helper)
             let requiredYOE = Self.extractRequiredYOE(from: cleanedJob)
             
-            // Step 2: Extract actual YOE from cleaned resume structure (work experience only)
-            let cleanedResumeText = try await cleanResumeTextWithAI(request.resumeText)
-            let actualYOE = Self.extractWorkYOEFromCleanedText(cleanedResumeText)
+            // Step 2: Calculate job-relevant YOE from resume experience
+            let actualYOE = try await calculateJobRelevantYOE(resumeText: request.resumeText, jobDescription: cleanedJob)
             
             // Step 3: Get LLM evaluation for experience, education, and skills
             let llmResult = try await GuidedEvaluationService.performFiveVariableLLMEvaluation(resumeText: request.resumeText, jobDescription: cleanedJob)
@@ -961,9 +933,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // Step 1: Parse required YOE from job description (using existing helper)
             let requiredYOE = Self.extractRequiredYOE(from: cleanedJob)
             
-            // Step 2: Extract actual YOE from cleaned resume structure (work experience only)
-            // Desktop already has cleaned resume data, so skip re-cleaning to avoid token limits
-            let actualYOE = Self.extractWorkYOEFromCleanedText(request.resumeText)
+            // Step 2: Calculate job-relevant YOE from resume experience  
+            let actualYOE = try await calculateJobRelevantYOE(resumeText: request.resumeText, jobDescription: cleanedJob)
             
             // Step 3: Get LLM evaluation for experience, education, and skills
             let llmResult = try await GuidedEvaluationService.performFiveVariableLLMEvaluation(resumeText: request.resumeText, jobDescription: cleanedJob)
@@ -1035,20 +1006,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Helper Methods
     
-    /// Extract work YOE from cleaned resume text using regex
-    private static func extractWorkYOEFromCleanedText(_ text: String) -> Double {
-        // Look for "Work YOE: X.X years" pattern
-        let pattern = "Work YOE:\\s*([0-9]+(?:\\.[0-9]+)?)\\s*years"
-        if let regex = try? NSRegularExpression(pattern: pattern, options: []),
-           let match = regex.firstMatch(in: text, options: [], range: NSRange(text.startIndex..., in: text)),
-           match.numberOfRanges > 1 {
-            let range = match.range(at: 1)
-            if let swiftRange = Range(range, in: text) {
-                let yoeString = String(text[swiftRange])
-                return Double(yoeString) ?? 0.0
-            }
-        }
-        return 0.0
+    /// Calculate job-relevant YOE by analyzing resume experience against specific job requirements
+    private func calculateJobRelevantYOE(resumeText: String, jobDescription: String) async throws -> Double {
+        let session = LanguageModelSession(instructions: "Calculate job-relevant years of experience. Only count experience that's relevant to this specific job. Work experience gets full credit, other experience (projects, volunteer, research) gets 0.5x credit.")
+        
+        let prompt = """
+        Calculate job-relevant YOE for this candidate:
+        
+        JOB DESCRIPTION:
+        \(jobDescription)
+        
+        RESUME:
+        \(resumeText)
+        
+        CALCULATION RULES:
+        1. Identify work experience relevant to this job (employment, internships, freelance)
+        2. Identify other relevant experience (projects, volunteer, research, academic work)  
+        3. Calculate: Job-Relevant Work YOE + (Job-Relevant Other YOE × 0.5)
+        4. Only count experience that relates to the job's requirements and responsibilities
+        5. Be conservative - when unsure, don't count the experience
+        
+        Return the final calculated YOE as a number between 0-8 years.
+        """
+        
+        let response = try await session.respond(to: prompt, generating: JobRelevantYOECalculation.self)
+        return response.content.actualYOE
     }
     
     private func getDesktopAppURL() -> URL? {
