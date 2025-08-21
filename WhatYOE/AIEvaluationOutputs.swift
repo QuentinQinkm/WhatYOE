@@ -51,9 +51,23 @@ struct LLMScoringOutput {
     let skills_rationale: String
 }
 
-// MARK: - YOE Parsing Output (Variable 2)
+// MARK: - YOE Parsing Outputs (Variables 1 & 2)
 
-/// Job-relevant years of experience calculation result
+/// Required years of experience extraction from job descriptions (Variable 1)
+/// Used by: CandidateEvaluationAI.extractRequiredYOEFromJob()
+@Generable
+struct RequiredYOEResult {
+    @Guide(description: "Required years of experience (0-8 range): minimum YOE specified in job posting, extracted as a number")
+    let required_yoe: Double
+    
+    @Guide(description: "Extraction confidence (0-1 range): AI confidence level in the YOE extraction accuracy")
+    let confidence: Double
+    
+    @Guide(description: "Extraction explanation: Brief explanation of where/how the YOE requirement was found")
+    let extraction_notes: String
+}
+
+/// Job-relevant years of experience calculation result (Variable 2)
 /// Used by: CandidateEvaluationAI.performResumeParsingForYOE()
 @Generable
 struct ResumeParsingResult {

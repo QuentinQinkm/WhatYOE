@@ -120,6 +120,37 @@ extension CandidateEvaluationAI {
         let response = try await session.respond(to: prompt, generating: ResumeParsingResult.self)
         return response.content
     }
+    
+    // MARK: Required YOE Extraction (Variable 1)
+    
+    /// Extract required years of experience from job description using dedicated AI structure
+    ///
+    /// **Purpose:** Extract Required YOE (Variable 1) from job descriptions as a number
+    /// **Input:** Raw job description text
+    /// **Output:** RequiredYOEResult with extracted number + confidence + explanation
+    /// **Used by:** 5-variable scoring system for Variable 1 calculation
+    /// **Advantage:** Direct number extraction, handles various formats, confident scoring
+    ///
+    /// - Parameters:
+    ///   - jobDescription: Raw job description text
+    /// - Returns: RequiredYOEResult with required YOE number and extraction details
+    /// - Throws: AI service errors if extraction fails
+    static func extractRequiredYOEFromJob(jobDescription: String) async throws -> RequiredYOEResult {
+        let session = LanguageModelSession(instructions: AIPromptLibrary.requiredYOEExtractionSystemPrompt)
+        
+        let prompt = """
+        Extract the required years of experience from this job description:
+        
+        === JOB DESCRIPTION ===
+        \(jobDescription)
+        === END JOB DESCRIPTION ===
+        
+        Find minimum/required years of experience mentioned in the posting.
+        """
+        
+        let response = try await session.respond(to: prompt, generating: RequiredYOEResult.self)
+        return response.content
+    }
 }
 
 // MARK: - Private Helper Functions

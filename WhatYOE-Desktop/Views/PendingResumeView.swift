@@ -5,6 +5,7 @@ struct PendingResumeData {
     let rawText: String
     let url: URL
     var cleanedText: String?
+    var requestId: String?  // Store cleaning request ID to link with structured data
     var isProcessing: Bool = false
 }
 

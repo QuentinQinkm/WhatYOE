@@ -35,7 +35,7 @@ import FoundationModels
 /// **Pipeline:** ContactInfo → Experience → Education → Skills → Final Assembly
 /// **Used by:** Resume cleaning pipeline, candidate evaluation functions
 @Generable
-struct CleanedResume {
+struct CleanedResume: Codable {
     @Guide(description: "Contact information: name, email, phone extracted from resume header/footer")
     let contactInfo: ContactInfo
     
@@ -63,7 +63,7 @@ struct CleanedResume {
 /// Contact details extracted from resume header/footer
 /// **Extraction Step:** 1 (First step in multi-step pipeline)
 @Generable
-struct ContactInfo {
+struct ContactInfo: Codable {
     @Guide(description: "Full name as it appears on the resume")
     let name: String
     
@@ -80,7 +80,7 @@ struct ContactInfo {
 /// **Extraction Step:** 2 (Second step in multi-step pipeline)
 /// **Critical Distinction:** Work experience (paid) vs Other experience (projects, volunteer, etc.)
 @Generable
-struct ProfessionalExperience {
+struct ProfessionalExperience: Codable {
     @Guide(description: "PAID work experience: employment, internships, freelance work, consulting")
     let workExperience: [WorkExperience]
     
@@ -90,7 +90,7 @@ struct ProfessionalExperience {
 
 /// Work experience entry - Paid professional positions only
 @Generable
-struct WorkExperience {
+struct WorkExperience: Codable {
     @Guide(description: "Company, organization, or client name")
     let company: String
     
@@ -109,7 +109,7 @@ struct WorkExperience {
 
 /// Other experience entry - Non-paid but relevant experience
 @Generable
-struct OtherExperience {
+struct OtherExperience: Codable {
     @Guide(description: "Title/name of the experience: project name, volunteer role, research title")
     let title: String
     
@@ -140,7 +140,7 @@ struct OtherExperience {
 /// Educational background entry
 /// **Extraction Step:** 3 (Third step in multi-step pipeline)
 @Generable
-struct Education {
+struct Education: Codable {
     @Guide(description: "Name of educational institution, university, college, or school")
     let institution: String
     
@@ -160,7 +160,7 @@ struct Education {
 /// **Extraction Step:** 4 (Fourth step in multi-step pipeline)
 /// **Purpose:** Categorize all skills for better job matching accuracy
 @Generable
-struct Skills {
+struct Skills: Codable {
     @Guide(description: "Technical skills: programming languages, software, tools, platforms, frameworks, databases, cloud services")
     let technicalSkills: [String]
     
@@ -177,7 +177,7 @@ struct Skills {
 /// **Important:** This structure exists for completeness but is not used during resume cleaning
 /// **Reason:** YOE must be calculated job-specifically during evaluation phase for accuracy
 @Generable
-struct YearsOfExperienceCalculation {
+struct YearsOfExperienceCalculation: Codable {
     @Guide(description: "INTENTIONALLY EMPTY: YOE calculation is deferred to job-specific evaluation phase")
     let workYOE: Double
     

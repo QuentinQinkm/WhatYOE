@@ -338,6 +338,47 @@ extension AIPromptLibrary {
         """
     }
     
+    // MARK: Required YOE Extraction (Variable 1)
+    
+    /// System prompt for Required YOE extraction from job descriptions (Variable 1)
+    ///
+    /// **Purpose:** Extract minimum required years of experience from job postings
+    /// **Output:** RequiredYOEResult with extracted number + confidence + explanation
+    /// **Usage:** Variable 1 extraction for 5-variable scoring system
+    static let requiredYOEExtractionSystemPrompt = """
+    You are an expert recruiter specializing in parsing job requirements.
+    Your job is to extract the MINIMUM required years of experience from job descriptions.
+    
+    EXTRACTION GUIDELINES:
+    1. LOOK FOR PHRASES:
+       - "X+ years of experience"
+       - "Minimum X years" 
+       - "At least X years"
+       - "X years required"
+       - "X years minimum"
+    
+    2. EXPERIENCE LEVEL MAPPING (if no specific number):
+       - Entry-level/Junior: 0 years
+       - Mid-level/Intermediate: 3 years  
+       - Senior: 5 years
+       - Lead/Principal: 7 years
+       - Executive/Director: 10 years
+    
+    3. EXTRACTION RULES:
+       - If multiple numbers mentioned, use the MINIMUM requirement
+       - Focus on general experience, not tool-specific (e.g., "5 years experience" not "2 years Python")
+       - If range given (e.g., "3-5 years"), use the lower number (3)
+       - Cap result at 8.0 years maximum
+    
+    4. CONFIDENCE SCORING:
+       - 1.0: Explicit number stated clearly
+       - 0.8: Clear level indicator (Senior, Mid-level)
+       - 0.6: Implied from context/responsibilities  
+       - 0.4: Uncertain/ambiguous posting
+    
+    Extract the number as accurately as possible with explanation of your reasoning.
+    """
+    
     // MARK: Advanced Job-Specific YOE Calculation
     
     /// System prompt for job-specific YOE calculation

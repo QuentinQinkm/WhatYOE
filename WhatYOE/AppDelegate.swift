@@ -8,22 +8,20 @@ import FoundationModels
 struct ResumeItem {
     let id: String
     let name: String
-    let cleanedText: String
     let dateCreated: Date
     
-    // Convenience initializer for backward compatibility
-    init(name: String, cleanedText: String) {
-        self.id = UUID().uuidString
-        self.name = name
-        self.cleanedText = cleanedText
-        self.dateCreated = Date()
-    }
-    
-    init(id: String, name: String, cleanedText: String, dateCreated: Date) {
+    // Simplified initializer - no more cleanedText redundancy
+    init(id: String, name: String, dateCreated: Date) {
         self.id = id
         self.name = name
-        self.cleanedText = cleanedText
         self.dateCreated = dateCreated
+    }
+    
+    // Legacy initializer for backward compatibility (generates new ID)
+    init(name: String) {
+        self.id = UUID().uuidString
+        self.name = name
+        self.dateCreated = Date()
     }
 }
 
@@ -66,11 +64,147 @@ class ResumeManager {
     
     func setActiveResume(_ resume: ResumeItem) {
         userDefaults.set(resume.id, forKey: "activeResumeId")
-        userDefaults.set(resume.cleanedText, forKey: "cleanedResumeData")
+        // Note: cleanedResumeData removed - now generated on-demand from structured data
+    }
+    
+    // MARK: - Structured CleanedResume Storage
+    
+    func storeStructuredResumeData(_ resumeId: String, structuredData: CleanedResume) {
+        guard let encoded = try? JSONEncoder().encode(structuredData) else { return }
+        userDefaults.set(encoded, forKey: "structuredResumeData_\(resumeId)")
+        print("📚 Stored structured resume data for ID: \(resumeId)")
+    }
+    
+    func getStructuredResumeData(for resumeId: String) -> CleanedResume? {
+        guard let data = userDefaults.data(forKey: "structuredResumeData_\(resumeId)"),
+              let cleanedResume = try? JSONDecoder().decode(CleanedResume.self, from: data) else {
+            print("⚠️ No structured resume data found for ID: \(resumeId)")
+            return nil
+        }
+        print("📚 Retrieved structured resume data for ID: \(resumeId)")
+        return cleanedResume
+    }
+    
+    func getActiveStructuredResumeData() -> CleanedResume? {
+        guard let activeResumeId = getActiveResumeId() else {
+            print("⚠️ No active resume ID found")
+            return nil
+        }
+        return getStructuredResumeData(for: activeResumeId)
+    }
+    
+    // MARK: - On-Demand Text Generation
+    
+    func getFormattedResumeText(for resumeId: String) -> String? {
+        guard let structuredData = getStructuredResumeData(for: resumeId) else {
+            print("⚠️ No structured data found for resume ID: \(resumeId)")
+            return nil
+        }
+        return formatCleanedResumeAsText(structuredData)
+    }
+    
+    func getActiveFormattedResumeText() -> String? {
+        guard let activeResumeId = getActiveResumeId() else {
+            print("⚠️ No active resume ID found")
+            return nil
+        }
+        return getFormattedResumeText(for: activeResumeId)
     }
     
     func getActiveResumeId() -> String? {
         return userDefaults.string(forKey: "activeResumeId")
+    }
+    
+    // MARK: - Resume Text Formatting
+    
+    func formatCleanedResumeAsText(_ resume: CleanedResume) -> String {
+        var text = ""
+        
+        // Contact Info
+        text += "\(resume.contactInfo.name)\n"
+        if let email = resume.contactInfo.email { text += "Email: \(email)\n" }
+        if let phone = resume.contactInfo.phone { text += "Phone: \(phone)\n" }
+        text += "\n"
+        
+        // Summary
+        if let summary = resume.summary {
+            text += "PROFESSIONAL SUMMARY\n\(summary)\n\n"
+        }
+        
+        // Years of Experience Calculation
+        text += "YEARS OF EXPERIENCE\n"
+        text += "Work YOE: \(String(format: "%.1f", resume.yearsOfExperience.workYOE)) years\n"
+        text += "Calculation: \(resume.yearsOfExperience.workYOECalculation)\n"
+        text += "Total (including projects): \(String(format: "%.1f", resume.yearsOfExperience.totalYOEIncludingProjects)) years\n"
+        if !resume.yearsOfExperience.excludedGaps.isEmpty {
+            text += "Excluded gaps: \(resume.yearsOfExperience.excludedGaps.joined(separator: ", "))\n"
+        }
+        text += "\n"
+        
+        // Professional Experience
+        text += "PROFESSIONAL EXPERIENCE\n\n"
+        
+        // Work Experience
+        if !resume.professionalExperience.workExperience.isEmpty {
+            text += "Work Experience\n"
+            for exp in resume.professionalExperience.workExperience {
+                text += "\(exp.role) at \(exp.company)\n"
+                text += "\(exp.startDate) - \(exp.endDate ?? "Present")\n"
+                for achievement in exp.keyAchievements {
+                    text += "• \(achievement)\n"
+                }
+                text += "\n"
+            }
+        }
+        
+        // Other Experience
+        if !resume.professionalExperience.otherExperience.isEmpty {
+            text += "Other Experience\n"
+            for exp in resume.professionalExperience.otherExperience {
+                text += "\(exp.title)"
+                if let org = exp.organization { text += " - \(org)" }
+                text += " (\(exp.experienceType))\n"
+                if let start = exp.startDate {
+                    text += "\(start) - \(exp.endDate ?? "Present")\n"
+                }
+                text += "\(exp.description)\n"
+                if !exp.technologiesUsed.isEmpty {
+                    text += "Technologies: \(exp.technologiesUsed.joined(separator: ", "))\n"
+                }
+                for achievement in exp.achievements {
+                    text += "• \(achievement)\n"
+                }
+                text += "\n"
+            }
+        }
+        
+        // Education
+        if !resume.education.isEmpty {
+            text += "EDUCATION\n"
+            for edu in resume.education {
+                text += "\(edu.degree)"
+                if let field = edu.field { text += " in \(field)" }
+                text += " - \(edu.institution)"
+                if let year = edu.year { text += " (\(year))" }
+                text += "\n"
+            }
+            text += "\n"
+        }
+        
+        // Skills
+        text += "SKILLS\n"
+        if !resume.skills.technicalSkills.isEmpty {
+            text += "Technical Skills: \(resume.skills.technicalSkills.joined(separator: ", "))\n"
+        }
+        if !resume.skills.professionalSkills.isEmpty {
+            text += "Professional Skills: \(resume.skills.professionalSkills.joined(separator: ", "))\n"
+        }
+        if !resume.skills.industrySkills.isEmpty {
+            text += "Industry Skills: \(resume.skills.industrySkills.joined(separator: ", "))\n"
+        }
+        text += "\n"
+        
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 
@@ -84,6 +218,18 @@ struct ResumeCleaningRequest: Codable {
 struct ResumeCleaningResponse: Codable {
     let requestId: String
     let cleanedText: String?
+    let error: String?
+    let timestamp: Date
+}
+
+struct ResumeTextRequest: Codable {
+    let resumeId: String
+    let timestamp: Date
+}
+
+struct ResumeTextResponse: Codable {
+    let resumeId: String
+    let formattedText: String?
     let error: String?
     let timestamp: Date
 }
@@ -261,7 +407,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         do {
             // Use AIPromptLibrary for consistent cleaning
-            let cleanedText = try await cleanResumeTextWithAI(request.rawText)
+            let (cleanedText, structuredData) = try await cleanResumeTextWithAI(request.rawText)
+            
+            // Store structured data for better evaluation
+            ResumeManager.shared.storeStructuredResumeData(request.id, structuredData: structuredData)
             
             // Send response back
             let response = ResumeCleaningResponse(
@@ -313,7 +462,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    private func cleanResumeTextWithAI(_ text: String) async throws -> String {
+    private func cleanResumeTextWithAI(_ text: String) async throws -> (cleanedText: String, structuredData: CleanedResume) {
         print("🧹 Starting multi-step resume cleaning...")
         print("📝 Resume text length: \(text.count) chars")
         
@@ -354,7 +503,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         )
         
         print("✅ Multi-step cleaning completed successfully")
-        return formatCleanedResumeAsText(cleanedResume)
+        let formattedText = ResumeManager.shared.formatCleanedResumeAsText(cleanedResume)
+        return (cleanedText: formattedText, structuredData: cleanedResume)
     }
     
     // MARK: - Multi-Step Resume Extraction Functions
@@ -389,101 +539,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     
-    private func formatCleanedResumeAsText(_ resume: CleanedResume) -> String {
-        var text = ""
-        
-        // Contact Info
-        text += "\(resume.contactInfo.name)\n"
-        if let email = resume.contactInfo.email { text += "Email: \(email)\n" }
-        if let phone = resume.contactInfo.phone { text += "Phone: \(phone)\n" }
-        text += "\n"
-        
-        // Summary
-        if let summary = resume.summary {
-            text += "PROFESSIONAL SUMMARY\n\(summary)\n\n"
-        }
-        
-        // Years of Experience Calculation
-        text += "YEARS OF EXPERIENCE\n"
-        text += "Work YOE: \(String(format: "%.1f", resume.yearsOfExperience.workYOE)) years\n"
-        text += "Calculation: \(resume.yearsOfExperience.workYOECalculation)\n"
-        text += "Total (including projects): \(String(format: "%.1f", resume.yearsOfExperience.totalYOEIncludingProjects)) years\n"
-        if !resume.yearsOfExperience.excludedGaps.isEmpty {
-            text += "Excluded gaps: \(resume.yearsOfExperience.excludedGaps.joined(separator: ", "))\n"
-        }
-        text += "\n"
-        
-        // Professional Experience
-        text += "PROFESSIONAL EXPERIENCE\n\n"
-        
-        // Work Experience
-        if !resume.professionalExperience.workExperience.isEmpty {
-            text += "Work Experience\n"
-            for exp in resume.professionalExperience.workExperience {
-                text += "\(exp.role) at \(exp.company)\n"
-                text += "\(exp.startDate) - \(exp.endDate ?? "Present")\n"
-                for achievement in exp.keyAchievements {
-                    text += "• \(achievement)\n"
-                }
-                text += "\n"
-            }
-        }
-        
-        // Other Experience
-        if !resume.professionalExperience.otherExperience.isEmpty {
-            text += "Other Experience\n"
-            for exp in resume.professionalExperience.otherExperience {
-                text += "\(exp.title)"
-                if let org = exp.organization { text += " - \(org)" }
-                text += " (\(exp.experienceType))\n"
-                if let start = exp.startDate {
-                    text += "\(start) - \(exp.endDate ?? "Present")\n"
-                }
-                text += "\(exp.description)\n"
-                if !exp.technologiesUsed.isEmpty {
-                    text += "Technologies: \(exp.technologiesUsed.joined(separator: ", "))\n"
-                }
-                for achievement in exp.achievements {
-                    text += "• \(achievement)\n"
-                }
-                text += "\n"
-            }
-        }
-        
-        // Education
-        if !resume.education.isEmpty {
-            text += "EDUCATION\n"
-            for edu in resume.education {
-                text += "\(edu.degree)"
-                if let field = edu.field { text += " in \(field)" }
-                text += " - \(edu.institution)"
-                if let year = edu.year { text += " (\(year))" }
-                text += "\n"
-            }
-            text += "\n"
-        }
-        
-        // Skills
-        text += "SKILLS\n"
-        if !resume.skills.technicalSkills.isEmpty {
-            text += "Technical Skills: \(resume.skills.technicalSkills.joined(separator: ", "))\n"
-        }
-        if !resume.skills.professionalSkills.isEmpty {
-            text += "Professional Skills: \(resume.skills.professionalSkills.joined(separator: ", "))\n"
-        }
-        if !resume.skills.industrySkills.isEmpty {
-            text += "Industry Skills: \(resume.skills.industrySkills.joined(separator: ", "))\n"
-        }
-        text += "\n"
-        
-        
-        return text.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
     
     
     // MARK: - Job Processing Helpers
     
-    private func cleanJobDescriptionWithAI(_ text: String) async throws -> String {
+    private func cleanJobDescriptionWithAI(_ text: String) async throws -> CleanedJobDescription {
         // Fix: Create single comprehensive prompt instead of using session instructions + prompt
         // This avoids job text duplication that was causing context window overflow
         let comprehensivePrompt = """
@@ -503,8 +563,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let session = LanguageModelSession()
         let response = try await session.respond(to: comprehensivePrompt, generating: CleanedJobDescription.self)
         
-        // Convert structured data back to text for backward compatibility
-        return formatCleanedJobAsText(response.content)
+        // Return structured data directly instead of converting to text
+        return response.content
     }
     
     private func formatCleanedJobAsText(_ job: CleanedJobDescription) -> String {
@@ -589,6 +649,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Start a background task to monitor for resume cleaning requests
         Task {
             await monitorResumeCleaningRequests()
+        }
+        
+        // Start a background task to monitor for resume text requests (frontend requesting formatted text)
+        Task {
+            await monitorResumeTextRequests()
         }
         
         // Start a background task to monitor for stop/resume commands
@@ -690,6 +755,63 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             
             // Check every 500ms when active
             try? await Task.sleep(nanoseconds: 500_000_000)
+        }
+    }
+    
+    // MARK: - Frontend Text Requests
+    
+    private func monitorResumeTextRequests() async {
+        let sharedDefaults = UserDefaults(suiteName: "group.com.kuangming.WhatYOE.shared") ?? UserDefaults.standard
+        
+        while true {
+            if let requestData = sharedDefaults.data(forKey: "resumeTextRequest"),
+               let status = sharedDefaults.string(forKey: "resumeTextRequestStatus"),
+               status == "pending",
+               let request = try? JSONDecoder().decode(ResumeTextRequest.self, from: requestData) {
+                
+                print("📝 Processing resume text request for ID: \(request.resumeId)")
+                await processResumeTextRequest(request)
+            }
+            
+            try? await Task.sleep(nanoseconds: 500_000_000) // Check every 0.5 seconds
+        }
+    }
+    
+    private func processResumeTextRequest(_ request: ResumeTextRequest) async {
+        let sharedDefaults = UserDefaults(suiteName: "group.com.kuangming.WhatYOE.shared") ?? UserDefaults.standard
+        
+        do {
+            // Get formatted text from structured data
+            guard let formattedText = ResumeManager.shared.getFormattedResumeText(for: request.resumeId) else {
+                throw NSError(domain: "ResumeTextError", code: 1, userInfo: [NSLocalizedDescriptionKey: "No formatted text available for resume ID: \(request.resumeId)"])
+            }
+            
+            let response = ResumeTextResponse(
+                resumeId: request.resumeId,
+                formattedText: formattedText,
+                error: nil,
+                timestamp: Date()
+            )
+            
+            if let responseData = try? JSONEncoder().encode(response) {
+                sharedDefaults.set(responseData, forKey: "resumeTextResponse")
+                sharedDefaults.set("completed", forKey: "resumeTextRequestStatus")
+                print("✅ Resume text request completed for ID: \(request.resumeId)")
+            }
+            
+        } catch {
+            let response = ResumeTextResponse(
+                resumeId: request.resumeId,
+                formattedText: nil,
+                error: error.localizedDescription,
+                timestamp: Date()
+            )
+            
+            if let responseData = try? JSONEncoder().encode(response) {
+                sharedDefaults.set(responseData, forKey: "resumeTextResponse")
+                sharedDefaults.set("error", forKey: "resumeTextRequestStatus")
+                print("❌ Resume text request failed for ID: \(request.resumeId) - \(error.localizedDescription)")
+            }
         }
     }
     
@@ -809,16 +931,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // Use new 5-variable scoring system
             print("🌐 Processing Safari analysis request using NEW 5-variable scoring system")
             
+            // Step 0: Clean job description first
             let cleanedJob = try await cleanJobDescriptionWithAI(request.jobDescription)
+            let cleanedJobText = formatCleanedJobAsText(cleanedJob)
             
-            // Step 1: Parse required YOE from job description (using existing helper)
-            let requiredYOE = Self.extractRequiredYOE(from: cleanedJob)
+            // Step 1: Extract required YOE from job description using dedicated AI
+            let requiredYOEResult = try await CandidateEvaluationAI.extractRequiredYOEFromJob(jobDescription: request.jobDescription)
+            let requiredYOE = requiredYOEResult.required_yoe
             
-            // Step 2: Calculate job-relevant YOE from resume experience
-            let actualYOE = try await calculateJobRelevantYOE(resumeText: request.resumeText, jobDescription: cleanedJob)
+            // Step 2: Get structured resume data (always available now)
+            guard let structuredResumeData = ResumeManager.shared.getActiveStructuredResumeData() else {
+                throw NSError(domain: "ResumeError", code: 1, userInfo: [NSLocalizedDescriptionKey: "No structured resume data found"])
+            }
             
-            // Step 3: Get LLM evaluation for experience, education, and skills
-            let llmResult = try await CandidateEvaluationAI.performFiveVariableLLMEvaluation(resumeText: request.resumeText, jobDescription: cleanedJob)
+            // Generate formatted text on-demand for YOE calculation
+            let formattedResumeText = ResumeManager.shared.getActiveFormattedResumeText() ?? "Resume text unavailable"
+            
+            // Step 3: Calculate job-relevant YOE from resume experience  
+            let actualYOE = try await calculateJobRelevantYOE(resumeText: formattedResumeText, jobDescription: cleanedJobText)
+            
+            // Step 4: Get LLM evaluation using structured resume data (always!)
+            print("🔬 Using structured CleanedResume data for evaluation")
+            let llmResult = try await CandidateEvaluationAI.evaluateCandidate_WithCleanedResume(
+                cleanedResume: structuredResumeData, 
+                jobDescription: cleanedJobText
+            )
             
             // Step 4: Calculate final score using new 5-variable formula
             let scoringResult = ScoreCalculator.computeCandidateScore(
@@ -831,12 +968,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             
             let results = """
             5-VARIABLE SCORING RESULTS
-            Required YOE: \(String(format: "%.1f", requiredYOE))
+            Required YOE: \(String(format: "%.1f", requiredYOE)) (Confidence: \(String(format: "%.1f", requiredYOEResult.confidence)))
             Actual YOE: \(String(format: "%.1f", actualYOE))
             Experience Score: \(llmResult.exp_score)/4
             Education Score: \(llmResult.edu_score)/4
             Skills Score: \(llmResult.skill_score)/4
             Final Score: \(scoringResult.score_percentage) / 100 (\(ScoreCalculator.specRating(for: scoringResult.score_percentage)))
+            
+            Required YOE Extraction: \(requiredYOEResult.extraction_notes)
             
             Rationales:
             Experience: \(llmResult.experience_rationale)
@@ -861,7 +1000,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let savedJob = JobManager.shared.createJobFromSafariAnalysisWithScores(
                 jobTitle: jobTitle,
                 company: company,
-                cleanedJobDescription: cleanedJob,
+                cleanedJobDescription: cleanedJobText, // Use cleaned and formatted job description
                 analysisResult: results,
                 analysisScores: jobScores,
                 resumeId: activeResumeId,
@@ -926,16 +1065,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         do {
             print("🖥️ Processing desktop analysis request using NEW 5-variable scoring system")
             
+            // Step 0: Clean job description first
             let cleanedJob = try await cleanJobDescriptionWithAI(request.jobDescription)
+            let cleanedJobText = formatCleanedJobAsText(cleanedJob)
             
-            // Step 1: Parse required YOE from job description (using existing helper)
-            let requiredYOE = Self.extractRequiredYOE(from: cleanedJob)
+            // Step 1: Extract required YOE from job description using dedicated AI
+            let requiredYOEResult = try await CandidateEvaluationAI.extractRequiredYOEFromJob(jobDescription: request.jobDescription)
+            let requiredYOE = requiredYOEResult.required_yoe
             
-            // Step 2: Calculate job-relevant YOE from resume experience  
-            let actualYOE = try await calculateJobRelevantYOE(resumeText: request.resumeText, jobDescription: cleanedJob)
+            // Step 2: Get structured resume data (always available now)
+            guard let structuredResumeData = ResumeManager.shared.getActiveStructuredResumeData() else {
+                throw NSError(domain: "ResumeError", code: 1, userInfo: [NSLocalizedDescriptionKey: "No structured resume data found"])
+            }
             
-            // Step 3: Get LLM evaluation for experience, education, and skills
-            let llmResult = try await CandidateEvaluationAI.performFiveVariableLLMEvaluation(resumeText: request.resumeText, jobDescription: cleanedJob)
+            // Generate formatted text on-demand for YOE calculation
+            let formattedResumeText = ResumeManager.shared.getActiveFormattedResumeText() ?? "Resume text unavailable"
+            
+            // Step 3: Calculate job-relevant YOE from resume experience  
+            let actualYOE = try await calculateJobRelevantYOE(resumeText: formattedResumeText, jobDescription: cleanedJobText)
+            
+            // Step 4: Get LLM evaluation using structured resume data (always!)
+            print("🔬 Using structured CleanedResume data for evaluation")
+            let llmResult = try await CandidateEvaluationAI.evaluateCandidate_WithCleanedResume(
+                cleanedResume: structuredResumeData, 
+                jobDescription: cleanedJobText
+            )
             
             // Step 4: Calculate final score using new 5-variable formula
             let scoringResult = ScoreCalculator.computeCandidateScore(
@@ -948,12 +1102,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             
             let results = """
             5-VARIABLE SCORING RESULTS
-            Required YOE: \(String(format: "%.1f", requiredYOE))
+            Required YOE: \(String(format: "%.1f", requiredYOE)) (Confidence: \(String(format: "%.1f", requiredYOEResult.confidence)))
             Actual YOE: \(String(format: "%.1f", actualYOE))
             Experience Score: \(llmResult.exp_score)/4
             Education Score: \(llmResult.edu_score)/4
             Skills Score: \(llmResult.skill_score)/4
             Final Score: \(scoringResult.score_percentage) / 100 (\(ScoreCalculator.specRating(for: scoringResult.score_percentage)))
+            
+            Required YOE Extraction: \(requiredYOEResult.extraction_notes)
             
             Rationales:
             Experience: \(llmResult.experience_rationale)
@@ -1102,7 +1258,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     // MARK: - SPEC Helpers
+    static func extractRequiredYOE(from cleanedJob: CleanedJobDescription) -> Double {
+        // Use structured AI-extracted data instead of primitive regex
+        if let minimumYears = cleanedJob.experienceRequired.minimumYears {
+            return Double(minimumYears)
+        }
+        
+        // Fallback: try to infer from experience level if no specific years mentioned
+        switch cleanedJob.experienceRequired.level.lowercased() {
+        case let level where level.contains("entry") || level.contains("junior"):
+            return 0.0
+        case let level where level.contains("mid") || level.contains("intermediate"):
+            return 3.0
+        case let level where level.contains("senior"):
+            return 5.0
+        case let level where level.contains("lead") || level.contains("principal"):
+            return 7.0
+        case let level where level.contains("executive") || level.contains("director"):
+            return 10.0
+        default:
+            return 0.0
+        }
+    }
+    
+    // Legacy function for backward compatibility (deprecated)
     static func extractRequiredYOE(from text: String) -> Double {
+        print("⚠️ Using deprecated regex-based YOE extraction. Consider updating to use CleanedJobDescription.")
+        
         // Try patterns like "Minimum 3 years", "3+ years", "at least 2 years"
         let patterns = [
             "[Mm]in(?:imum)?\\s*([0-9]+(?:\\.[0-9]+)?)\\s*\\+?\\s*[Yy]ears",

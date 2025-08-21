@@ -16,21 +16,20 @@ import AppKit
 struct ResumeItem: Identifiable {
     let id: String
     let name: String
-    let cleanedText: String
     let dateCreated: Date
     
-    init(name: String, cleanedText: String) {
-        self.id = UUID().uuidString
-        self.name = name
-        self.cleanedText = cleanedText
-        self.dateCreated = Date()
-    }
-    
-    init(id: String, name: String, cleanedText: String, dateCreated: Date) {
+    // Simplified initializer - no more cleanedText redundancy
+    init(id: String, name: String, dateCreated: Date) {
         self.id = id
         self.name = name
-        self.cleanedText = cleanedText
         self.dateCreated = dateCreated
+    }
+    
+    // Legacy initializer for backward compatibility (generates new ID)
+    init(name: String) {
+        self.id = UUID().uuidString
+        self.name = name
+        self.dateCreated = Date()
     }
     
     var isActive: Bool {
@@ -68,8 +67,7 @@ class ResumeManager {
             userDefaults.set(data, forKey: resumesKey)
         }
         
-        // Also save the latest as the default for extension
-        userDefaults.set(resume.cleanedText, forKey: "cleanedResumeData")
+        // Note: cleanedResumeData removed - now generated on-demand from structured data
     }
     
     func getAllResumes() -> [ResumeItem] {
@@ -103,7 +101,7 @@ class ResumeManager {
             
             // Update active resume data if this is the active resume
             if getActiveResumeId() == updatedResume.id {
-                userDefaults.set(updatedResume.cleanedText, forKey: "cleanedResumeData")
+                // Note: cleanedResumeData removed - now generated on-demand from structured data
             }
         }
     }
@@ -113,12 +111,97 @@ class ResumeManager {
     }
     
     func setActiveResume(_ resume: ResumeItem) {
-        userDefaults.set(resume.cleanedText, forKey: "cleanedResumeData")
+        // Note: cleanedResumeData removed - now generated on-demand from structured data
         userDefaults.set(resume.id, forKey: "activeResumeId")
     }
     
     func getActiveResumeId() -> String? {
         return userDefaults.string(forKey: "activeResumeId")
+    }
+    
+    // MARK: - Frontend: Request formatted text from backend
+    
+    func getFormattedResumeText(for resumeId: String) async -> String? {
+        // Frontend should request formatted text from backend WhatYOE app
+        return await requestFormattedTextFromBackend(resumeId: resumeId)
+    }
+    
+    func getActiveFormattedResumeText() async -> String? {
+        guard let activeResumeId = getActiveResumeId() else {
+            print("⚠️ No active resume ID found")
+            return nil
+        }
+        return await getFormattedResumeText(for: activeResumeId)
+    }
+    
+    private func requestFormattedTextFromBackend(resumeId: String) async -> String? {
+        // Create request for formatted text
+        let request = ResumeTextRequest(resumeId: resumeId, timestamp: Date())
+        let sharedDefaults = UserDefaults(suiteName: "group.com.kuangming.WhatYOE.shared") ?? UserDefaults.standard
+        
+        guard let requestData = try? JSONEncoder().encode(request) else {
+            print("❌ Failed to encode resume text request")
+            return nil
+        }
+        
+        // Store request for backend to process
+        sharedDefaults.set(requestData, forKey: "resumeTextRequest")
+        sharedDefaults.set("pending", forKey: "resumeTextRequestStatus")
+        
+        // Launch backend to process
+        do {
+            try await launchBackendForTextRequest()
+            return try await waitForTextResponse(resumeId: resumeId)
+        } catch {
+            print("❌ Failed to get formatted text from backend: \(error)")
+            return nil
+        }
+    }
+    
+    private func launchBackendForTextRequest() async throws {
+        let bundleIdentifier = "com.kuangming.WhatYOE"
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = false
+        configuration.hides = true
+        
+        if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) {
+            try await NSWorkspace.shared.openApplication(at: appURL, configuration: configuration)
+            try await Task.sleep(nanoseconds: 1_000_000_000) // Wait 1 second for launch
+        } else {
+            throw NSError(domain: "LaunchError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Cannot find backend app"])
+        }
+    }
+    
+    private func waitForTextResponse(resumeId: String) async throws -> String {
+        let sharedDefaults = UserDefaults(suiteName: "group.com.kuangming.WhatYOE.shared") ?? UserDefaults.standard
+        
+        // Wait for response with timeout
+        for _ in 0..<30 { // 15 second timeout
+            if let status = sharedDefaults.string(forKey: "resumeTextRequestStatus") {
+                if status == "completed", let responseData = sharedDefaults.data(forKey: "resumeTextResponse") {
+                    if let response = try? JSONDecoder().decode(ResumeTextResponse.self, from: responseData),
+                       response.resumeId == resumeId {
+                        
+                        // Cleanup
+                        sharedDefaults.removeObject(forKey: "resumeTextRequest")
+                        sharedDefaults.removeObject(forKey: "resumeTextResponse")
+                        sharedDefaults.removeObject(forKey: "resumeTextRequestStatus")
+                        
+                        if let error = response.error {
+                            throw NSError(domain: "BackendError", code: 2, userInfo: [NSLocalizedDescriptionKey: error])
+                        }
+                        
+                        return response.formattedText ?? "Resume text unavailable"
+                    }
+                } else if status == "error" {
+                    throw NSError(domain: "BackendError", code: 3, userInfo: [NSLocalizedDescriptionKey: "Backend processing failed"])
+                }
+            }
+            
+            try await Task.sleep(nanoseconds: 500_000_000) // Wait 0.5 seconds
+        }
+        
+        throw NSError(domain: "TimeoutError", code: 4, userInfo: [NSLocalizedDescriptionKey: "Backend response timeout"])
     }
     
     var activeResume: ResumeItem? {
@@ -134,11 +217,11 @@ class ResumeManager {
             let extractedText = try extractTextFromPDF(url: url)
             
             // Clean the extracted text using AI
-            let cleanedText = try await cleanResumeText(extractedText)
+            let (cleanedText, requestId) = try await cleanResumeText(extractedText)
             
-            // Create resume item
+            // Create resume item using the cleaning request ID to link with structured data
             let fileName = url.deletingPathExtension().lastPathComponent
-            let resume = ResumeItem(name: fileName, cleanedText: cleanedText)
+            let resume = ResumeItem(id: requestId, name: fileName, dateCreated: Date())
             
             // Save the resume
             saveResume(resume)
@@ -175,11 +258,10 @@ class ResumeManager {
         return extractedText
     }
     
-    func cleanResumeText(_ text: String) async throws -> String {
+    func cleanResumeText(_ text: String) async throws -> (cleanedText: String, requestId: String) {
         do {
             // Send cleaning request to WhatYOE main app instead of processing locally
-            let cleanedText = try await requestResumeCleaningFromMainApp(text)
-            return cleanedText
+            return try await requestResumeCleaningFromMainApp(text)
         } catch {
             os_log(.error, "Server-based cleaning failed, falling back to basic cleaning: %@", error.localizedDescription)
             
@@ -188,11 +270,12 @@ class ResumeManager {
             cleanedText = cleanedText.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
             cleanedText = cleanedText.replacingOccurrences(of: "\n\\s*\n", with: "\n\n", options: .regularExpression)
             cleanedText = cleanedText.trimmingCharacters(in: .whitespacesAndNewlines)
-            return cleanedText
+            // Generate a fallback ID since we don't have a real request ID
+            return (cleanedText: cleanedText, requestId: UUID().uuidString)
         }
     }
     
-    private func requestResumeCleaningFromMainApp(_ text: String) async throws -> String {
+    private func requestResumeCleaningFromMainApp(_ text: String) async throws -> (cleanedText: String, requestId: String) {
         // Create cleaning request
         let request = ResumeCleaningRequest(
             id: UUID().uuidString,
@@ -210,7 +293,8 @@ class ResumeManager {
         try await launchMainAppForCleaning()
         
         // Wait for response
-        return try await waitForCleaningResponse(requestId: request.id)
+        let cleanedText = try await waitForCleaningResponse(requestId: request.id)
+        return (cleanedText: cleanedText, requestId: request.id)
     }
     
     private func launchMainAppForCleaning() async throws {
@@ -301,6 +385,18 @@ struct ResumeCleaningRequest: Codable {
 struct ResumeCleaningResponse: Codable {
     let requestId: String
     let cleanedText: String?
+    let error: String?
+    let timestamp: Date
+}
+
+struct ResumeTextRequest: Codable {
+    let resumeId: String
+    let timestamp: Date
+}
+
+struct ResumeTextResponse: Codable {
+    let resumeId: String
+    let formattedText: String?
     let error: String?
     let timestamp: Date
 }

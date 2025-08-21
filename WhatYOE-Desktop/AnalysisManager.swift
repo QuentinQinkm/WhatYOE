@@ -25,10 +25,13 @@ class AnalysisManager {
         jobDescription: String
     ) async throws -> String {
         
+        // Get formatted resume text from backend
+        let resumeText = await ResumeManager.shared.getFormattedResumeText(for: resume.id) ?? ""
+        
         // Create analysis request
         let request = AnalysisRequest(
             id: UUID().uuidString,
-            resumeText: resume.cleanedText,
+            resumeText: resumeText,
             jobDescription: jobDescription,
             timestamp: Date()
         )

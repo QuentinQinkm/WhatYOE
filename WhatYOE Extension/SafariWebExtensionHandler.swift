@@ -5,8 +5,19 @@ import AppKit
 struct ResumeItem: Codable {
     let id: String
     let name: String
-    let cleanedText: String
     let dateCreated: Date
+}
+
+struct ResumeTextRequest: Codable {
+    let resumeId: String
+    let timestamp: Date
+}
+
+struct ResumeTextResponse: Codable {
+    let resumeId: String
+    let formattedText: String?
+    let error: String?
+    let timestamp: Date
 }
 
 // MARK: - Safari Analysis Communication
@@ -363,14 +374,61 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     
     // MARK: - Resume Management
     private func getCleanedResumeData() -> String {
-        guard let activeResumeId = sharedDefaults.string(forKey: "activeResumeId"),
-              let resumesData = sharedDefaults.data(forKey: "savedResumes"),
-              let resumes = try? JSONDecoder().decode([ResumeItem].self, from: resumesData),
-              let activeResume = resumes.first(where: { $0.id == activeResumeId }) else {
-            return "No resume data available. Please import resume first."
+        guard let activeResumeId = sharedDefaults.string(forKey: "activeResumeId") else {
+            return "No active resume selected. Please select resume first."
         }
         
-        return activeResume.cleanedText
+        // Request formatted text from backend (synchronous for extension compatibility)
+        return requestFormattedTextFromBackend(resumeId: activeResumeId)
+    }
+    
+    private func requestFormattedTextFromBackend(resumeId: String) -> String {
+        let request = ResumeTextRequest(resumeId: resumeId, timestamp: Date())
+        
+        guard let requestData = try? JSONEncoder().encode(request) else {
+            return "Failed to request resume text from backend."
+        }
+        
+        // Store request for backend to process
+        sharedDefaults.set(requestData, forKey: "resumeTextRequest")
+        sharedDefaults.set("pending", forKey: "resumeTextRequestStatus")
+        
+        // Launch backend
+        launchBackendForTextRequest()
+        
+        // Wait for response (simplified synchronous approach for extension)
+        let timeout = Date().addingTimeInterval(10) // 10 second timeout
+        while Date() < timeout {
+            if let status = sharedDefaults.string(forKey: "resumeTextRequestStatus") {
+                if status == "completed", let responseData = sharedDefaults.data(forKey: "resumeTextResponse") {
+                    if let response = try? JSONDecoder().decode(ResumeTextResponse.self, from: responseData),
+                       response.resumeId == resumeId {
+                        
+                        // Cleanup
+                        sharedDefaults.removeObject(forKey: "resumeTextRequest")
+                        sharedDefaults.removeObject(forKey: "resumeTextResponse")
+                        sharedDefaults.removeObject(forKey: "resumeTextRequestStatus")
+                        
+                        return response.formattedText ?? "Resume text unavailable from backend."
+                    }
+                } else if status == "error" {
+                    return "Backend error processing resume text request."
+                }
+            }
+            
+            Thread.sleep(forTimeInterval: 0.5) // Wait 0.5 seconds
+        }
+        
+        return "Timeout waiting for resume text from backend."
+    }
+    
+    private func launchBackendForTextRequest() {
+        let bundleIdentifier = "com.kuangming.WhatYOE"
+        NSWorkspace.shared.launchApplication(withBundleIdentifier: bundleIdentifier,
+                                           options: [.withoutActivation],
+                                           additionalEventParamDescriptor: nil,
+                                           launchIdentifier: nil)
+        Thread.sleep(forTimeInterval: 1.0) // Wait for launch
     }
     
     private func getAvailableResumes() -> [[String: String]] {
@@ -396,7 +454,7 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         }
         
         sharedDefaults.set(id, forKey: "activeResumeId")
-        sharedDefaults.set(selectedResume.cleanedText, forKey: "cleanedResumeData")
+        // Note: cleanedResumeData removed - now requested from backend on-demand
         return true
     }
     

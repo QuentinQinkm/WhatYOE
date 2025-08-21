@@ -301,11 +301,12 @@ class ContentViewModel: ObservableObject {
         
         Task {
             do {
-                let cleanedText = try await resumeManager.cleanResumeText(pendingData.rawText)
+                let (cleanedText, requestId) = try await resumeManager.cleanResumeText(pendingData.rawText)
                 
                 await MainActor.run {
                     var updatedData = pendingData
                     updatedData.cleanedText = cleanedText
+                    updatedData.requestId = requestId  // Store the request ID for later use
                     updatedData.isProcessing = false
                     pendingResumeData = updatedData
                 }
@@ -322,11 +323,13 @@ class ContentViewModel: ObservableObject {
     
     func saveProcessedResume() {
         guard let pendingData = pendingResumeData,
-              let cleanedText = pendingData.cleanedText else { return }
+              let cleanedText = pendingData.cleanedText,
+              let requestId = pendingData.requestId else { return }
         
         let resume = ResumeItem(
+            id: requestId,  // Use cleaning request ID to link with structured data
             name: pendingData.fileName,
-            cleanedText: cleanedText
+            dateCreated: Date()
         )
         
         resumeManager.saveResume(resume)
@@ -356,7 +359,6 @@ class ContentViewModel: ObservableObject {
         let updatedResume = ResumeItem(
             id: resume.id,
             name: renameText.trimmingCharacters(in: .whitespacesAndNewlines),
-            cleanedText: resume.cleanedText,
             dateCreated: resume.dateCreated
         )
         
