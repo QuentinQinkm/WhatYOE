@@ -81,8 +81,6 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 }
             }
             
-            // Legacy sequential phase handlers removed - now using unified fourCycleAnalysis
-            
             // Handle resume management (needed for popup functionality)
             if messageContent == "getAvailableResumes" {
                 let resumes = getAvailableResumes()
@@ -294,7 +292,6 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     }
     
     
-    // Legacy phase analysis functions removed - now using unified fourCycleAnalysis
     
     
     private func requestFourCycleAnalysisFromBackgroundServer(resumeText: String, jobDescription: String, jobTitle: String, company: String, pageUrl: String) async throws -> String {

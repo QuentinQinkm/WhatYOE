@@ -1,0 +1,165 @@
+{
+  "name": "WhatYOE Job Evaluation Guide",
+  "description": "Job cleaning and 5-variable candidate evaluation system",
+  "version": "5-variable-system",
+  "workflow": {
+    "overview": "Clean job descriptions and evaluate candidates using 5-variable scoring system",
+    "phases": [
+      {
+        "phase": 1,
+        "name": "Job Description Cleaning",
+        "purpose": "Extract structured data from job postings",
+        "prompt_template": "Extract job posting data into structured format:\n\n=== JOB DESCRIPTION ===\n{job_description}\n=== END JOB DESCRIPTION ===\n\nFor requiredSkills and preferredSkills, extract all skills mentioned:\n- technicalSkills: Any tools, software, technologies, equipment, systems mentioned\n- professionalSkills: Work competencies and abilities\n- industrySkills: Domain-specific knowledge\n\nSeparate into required vs preferred based on language:\n- Required: \"must have\", \"required\", \"essential\", \"mandatory\"\n- Preferred: \"nice to have\", \"preferred\", \"bonus\", \"plus\", \"desired\"\n\nExtract all skills, tools, and competencies for the role.",
+        "output_structure": {
+          "title": "string - Job title or position name",
+          "company": "string - Company or organization name", 
+          "experienceRequired": {
+            "minimumYears": "integer|null - Minimum years of experience required",
+            "level": "string - Experience level (Entry, Mid, Senior, etc.)",
+            "industryContext": "string|null - Industry or domain context needed"
+          },
+          "requiredSkills": {
+            "technicalSkills": ["array of strings - Required technical skills"],
+            "professionalSkills": ["array of strings - Required professional skills"],
+            "industrySkills": ["array of strings - Required industry skills"]
+          },
+          "preferredSkills": {
+            "technicalSkills": ["array of strings - Preferred technical skills"],
+            "professionalSkills": ["array of strings - Preferred professional skills"], 
+            "industrySkills": ["array of strings - Preferred industry skills"]
+          },
+          "responsibilities": ["array of strings - Key responsibilities and duties"],
+          "educationRequirements": "string|null - Education requirements if specified"
+        }
+      },
+      {
+        "phase": 2,
+        "name": "Job-Relevant YOE Calculation",
+        "purpose": "Calculate job-specific years of experience from cleaned resume",
+        "prompt_template": "Calculate job-relevant years of experience from this resume for the given job:\n\n=== JOB DESCRIPTION ===\n{job_description}\n\n=== CLEANED RESUME ===\nWork Experience: {work_experience}\nOther Experience: {other_experience}\nEducation: {education}\nSkills: {skills}\n\nCALCULATION RULES:\n1. Extract work experience sections\n2. Calculate total relevant years (avoid double-counting overlaps)\n3. Include project experience using standard conversion:\n   - Major projects (6+ months): count as work experience\n   - Moderate projects (2-6 months): count as 0.5x\n   - Minor projects (<2 months): count as 0.1x\n4. Cap at 8.0 years maximum\n5. Return confidence score (0-1) for validation\n6. Provide brief explanation of calculation\n\nBe systematic and thorough in your analysis.",
+        "output_structure": {
+          "actualYOE": "number - Total relevant years of experience: Work YOE + (Other YOE × 0.5)",
+          "calculation": "string - Detailed calculation breakdown",
+          "relevantWorkYOE": "number - Years of directly relevant work experience",
+          "relevantOtherYOE": "number - Years of other experience demonstrating relevant skills", 
+          "confidence": "number - Parsing confidence (0-1 range)",
+          "calculation_notes": "string - Brief explanation of how YOE was calculated"
+        }
+      },
+      {
+        "phase": 3,
+        "name": "5-Variable LLM Evaluation",
+        "purpose": "AI evaluation of candidate across 3 scoring dimensions",
+        "system_prompt": "Rate candidate on 3 dimensions (0-4 scale):\n\nExpScore: Experience relevance to job's core tasks\n- 0: No relevant experience, 1: Minimal relevance, 2: Moderate relevance, 3: Strong relevance, 4: Excellent relevance\n\nEduScore: Education relevance to job requirements\n- 0: No relevant education, 1: Some relevant coursework, 2: Related degree, 3: Required degree, 4: Advanced degree\n\nSkillScore: Overall proficiency in required skills\n- 0: Missing critical skills, 1: Some skills with gaps, 2: Meets basic requirements, 3: Strong match, 4: Excellent coverage\n\nFocus on RELEVANCE and QUALITY. Provide concise rationales (max 2-3 lines each).",
+        "prompt_template": "=== JOB DESCRIPTION ===\n{job_description}\n\n=== RESUME ===\n{resume_text}\n\nOr for cleaned resume:\n\n=== JOB DESCRIPTION ===\n{job_description}\n\n=== CLEANED RESUME ===\nWork Experience: {work_experience_summary}\nOther Experience: {other_experience_summary}\nEducation: {education_summary}\nSkills: Technical: {technical_skills}, Professional: {professional_skills}, Industry: {industry_skills}",
+        "output_structure": {
+          "exp_score": "integer - Experience relevance score (0-4)",
+          "edu_score": "integer - Education relevance score (0-4)",
+          "skill_score": "integer - Skills proficiency score (0-4)",
+          "experience_rationale": "string - Experience rationale (max 2-3 lines)",
+          "education_rationale": "string - Education rationale (max 2-3 lines)",
+          "skills_rationale": "string - Skills rationale (max 2-3 lines)"
+        }
+      }
+    ]
+  },
+  "five_variable_system": {
+    "variables": {
+      "1": {
+        "name": "Required YOE",
+        "source": "Extracted from job description using regex patterns",
+        "description": "Minimum years of experience required by the job posting"
+      },
+      "2": {
+        "name": "Actual YOE", 
+        "source": "Job-relevant experience calculation from resume",
+        "description": "Candidate's relevant years of experience calculated specifically for this job"
+      },
+      "3": {
+        "name": "Experience Score",
+        "source": "AI evaluation (0-4 scale)",
+        "description": "How relevant is candidate's experience to job's core tasks"
+      },
+      "4": {
+        "name": "Education Score",
+        "source": "AI evaluation (0-4 scale)", 
+        "description": "How relevant is candidate's education to job requirements"
+      },
+      "5": {
+        "name": "Skills Score",
+        "source": "AI evaluation (0-4 scale)",
+        "description": "Overall proficiency in required skills"
+      }
+    },
+    "scoring_rubrics": {
+      "experience_score": {
+        "0": "No relevant experience",
+        "1": "Minimal relevance", 
+        "2": "Moderate relevance",
+        "3": "Strong relevance",
+        "4": "Excellent relevance"
+      },
+      "education_score": {
+        "0": "No relevant education",
+        "1": "Some relevant coursework",
+        "2": "Related degree but not exact match", 
+        "3": "Required degree obtained",
+        "4": "Advanced degree exceeding requirements"
+      },
+      "skills_score": {
+        "0": "Missing most critical skills",
+        "1": "Has some required skills with gaps",
+        "2": "Meets basic requirements with some gaps",
+        "3": "Strong skill match with minor gaps only",
+        "4": "Excellent skill coverage exceeding requirements"
+      }
+    }
+  },
+  "final_output_structure": {
+    "cleanedJobDescription": {
+      "title": "string",
+      "company": "string",
+      "experienceRequired": "object",
+      "requiredSkills": "object",
+      "preferredSkills": "object", 
+      "responsibilities": "array",
+      "educationRequirements": "string|null"
+    },
+    "jobRelevantYOE": {
+      "actualYOE": "number",
+      "calculation": "string",
+      "relevantWorkYOE": "number",
+      "relevantOtherYOE": "number",
+      "confidence": "number",
+      "calculation_notes": "string"
+    },
+    "llmEvaluation": {
+      "exp_score": "integer (0-4)",
+      "edu_score": "integer (0-4)", 
+      "skill_score": "integer (0-4)",
+      "experience_rationale": "string",
+      "education_rationale": "string",
+      "skills_rationale": "string"
+    },
+    "fiveVariables": {
+      "requiredYOE": "number - from job description",
+      "actualYOE": "number - from job-relevant calculation",
+      "expScore": "integer (0-4) - from AI evaluation",
+      "eduScore": "integer (0-4) - from AI evaluation",
+      "skillScore": "integer (0-4) - from AI evaluation"
+    }
+  },
+  "implementation_guidelines": {
+    "job_cleaning": "Extract comprehensive skill requirements, separating required vs preferred",
+    "yoe_calculation": "Focus on job-relevant experience with appropriate weighting for different experience types",
+    "ai_evaluation": "Use single comprehensive evaluation to assess all three dimensions simultaneously",
+    "scoring_focus": "Prioritize relevance and quality over quantity in all evaluations",
+    "final_calculation_note": "This guide stops at variable extraction - final score calculation using mathematical formula is handled separately"
+  },
+  "notes": {
+    "mathematical_scoring": "The 5 variables are inputs to a sophisticated mathematical formula that calculates the final candidate score (0-100%)",
+    "score_formula": "Formula includes YOE ratios, experience weighting, education weighting based on job requirements, and skills multiplier",
+    "rating_classification": "Final scores are classified as: Good (93-100%), Maybe (85-92%), Poor (75-84%), Denied (<75%)",
+    "scope": "This guide covers evaluation up to the 5-variable extraction - final score calculation is a separate mathematical process"
+  }
+}

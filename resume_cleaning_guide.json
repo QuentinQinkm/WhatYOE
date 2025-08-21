@@ -1,0 +1,116 @@
+{
+  "name": "WhatYOE Resume Cleaning Guide",
+  "description": "Multi-step AI-powered resume extraction and cleaning process",
+  "version": "5-variable-system",
+  "workflow": {
+    "overview": "Extract resume data using multi-step AI calls for improved reliability and reduced hallucination",
+    "steps": [
+      {
+        "step": 1,
+        "name": "Contact and Summary Extraction",
+        "purpose": "Extract basic contact information and professional summary",
+        "prompt_template": "Extract contact information and professional summary from this resume:\n\n=== RESUME TEXT ===\n{resume_text}\n=== END RESUME TEXT ===\n\nProvide structured extraction of contact details and summary.",
+        "output_structure": {
+          "contactInfo": {
+            "name": "string - Full name of the person",
+            "email": "string|null - Email address if available", 
+            "phone": "string|null - Phone number if available"
+          },
+          "summary": "string|null - Professional summary or objective statement if present"
+        }
+      },
+      {
+        "step": 2,
+        "name": "Professional Experience Extraction",
+        "purpose": "Separate work experience from other experience types",
+        "prompt_template": "Extract professional experience from this resume, categorizing into work vs other experience:\n\n=== RESUME TEXT ===\n{resume_text}\n=== END RESUME TEXT ===\n\nPROFESSIONAL EXPERIENCE: Separate into:\n1. Work Experience: Employment, internships, freelance work (paid positions)\n2. Other Experience: Projects, volunteer work, research, academic projects, open-source contributions, hackathons, side projects\n\nBe thorough and capture ALL experience types with specific skills and tools mentioned.",
+        "output_structure": {
+          "professionalExperience": {
+            "workExperience": [
+              {
+                "company": "string - Company or organization name",
+                "role": "string - Job title or role",
+                "startDate": "string - Start date in YYYY-MM format",
+                "endDate": "string|null - End date in YYYY-MM format, or null if current",
+                "keyAchievements": ["array of strings - Key achievements and responsibilities"]
+              }
+            ],
+            "otherExperience": [
+              {
+                "title": "string - Title or name of the experience",
+                "organization": "string|null - Organization, institution, or context",
+                "experienceType": "string - Type: project, volunteer, research, freelance, academic, etc.",
+                "startDate": "string|null - Start date in YYYY-MM format",
+                "endDate": "string|null - End date in YYYY-MM format, or null if ongoing",
+                "description": "string - Brief description of the experience",
+                "technologiesUsed": ["array of strings - Technologies and tools used"],
+                "achievements": ["array of strings - Key achievements and outcomes"]
+              }
+            ]
+          }
+        },
+        "important_notes": [
+          "Do NOT calculate years of experience in this step",
+          "YOE calculation will be done job-specifically during evaluation",
+          "Focus on accurate categorization of work vs other experience"
+        ]
+      },
+      {
+        "step": 3,
+        "name": "Education Extraction", 
+        "purpose": "Extract educational background information",
+        "prompt_template": "Extract education information from this resume:\n\n=== RESUME TEXT ===\n{resume_text}\n=== END RESUME TEXT ===\n\nExtract all educational background with degrees, institutions, and dates.",
+        "output_structure": {
+          "education": [
+            {
+              "institution": "string - Educational institution name",
+              "degree": "string - Degree or qualification obtained",
+              "field": "string|null - Field of study or major",
+              "year": "string|null - Graduation year"
+            }
+          ]
+        }
+      },
+      {
+        "step": 4,
+        "name": "Skills Extraction",
+        "purpose": "Extract comprehensive skills categorized by type",
+        "prompt_template": "Extract skills from this resume:\n\n=== RESUME TEXT ===\n{resume_text}\n=== END RESUME TEXT ===\n\nSKILLS: Extract all skills, tools, and competencies mentioned:\n- technicalSkills: Any tools, software, technologies, programming languages, platforms, equipment, instruments, systems\n- professionalSkills: Work-related competencies and abilities\n- industrySkills: Domain-specific knowledge and expertise\n\nBe thorough and capture ALL skills mentioned.",
+        "output_structure": {
+          "skills": {
+            "technicalSkills": ["array of strings - All technical skills, tools, software, and technologies"],
+            "professionalSkills": ["array of strings - Professional skills and competencies"],
+            "industrySkills": ["array of strings - Industry-specific knowledge and expertise"]
+          },
+          "certifications": ["array of strings - Professional certifications and training"]
+        }
+      }
+    ]
+  },
+  "final_output_structure": {
+    "contactInfo": {
+      "name": "string",
+      "email": "string|null",
+      "phone": "string|null"
+    },
+    "summary": "string|null",
+    "professionalExperience": {
+      "workExperience": ["array of work experience objects"],
+      "otherExperience": ["array of other experience objects"]
+    },
+    "education": ["array of education objects"],
+    "skills": {
+      "technicalSkills": ["array of strings"],
+      "professionalSkills": ["array of strings"],
+      "industrySkills": ["array of strings"]
+    },
+    "certifications": ["array of strings"]
+  },
+  "implementation_guidelines": {
+    "ai_reliability": "Use separate AI calls for each step to reduce hallucination and improve accuracy",
+    "context_management": "Each step focuses on specific data extraction to avoid token limit issues",
+    "yoe_calculation": "Years of Experience calculation is intentionally skipped - will be calculated job-specifically during evaluation phase",
+    "skills_extraction": "Be comprehensive in skills extraction as this data will be crucial for job matching",
+    "date_format": "Use YYYY-MM format for all dates to ensure consistency"
+  }
+}

@@ -260,7 +260,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         print("🧹 Main App: Using UserDefaults suite: group.com.kuangming.WhatYOE.shared")
         
         do {
-            // Use PromptTemplates for consistent cleaning
+            // Use AIPromptLibrary for consistent cleaning
             let cleanedText = try await cleanResumeTextWithAI(request.rawText)
             
             // Send response back
@@ -487,7 +487,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Fix: Create single comprehensive prompt instead of using session instructions + prompt
         // This avoids job text duplication that was causing context window overflow
         let comprehensivePrompt = """
-        \(PromptTemplates.jobCleaningPrompt)
+        \(AIPromptLibrary.jobCleaningPrompt)
         
         Extract and structure this job description following the format requirements:
         
@@ -570,8 +570,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     
-    
-    // Legacy combination removed for SPEC scoring
     
     // Score calculation and extraction now handled by ScoreCalculator
     
@@ -784,8 +782,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 
                 // Build response from existing job data using 5-variable system
                 let analysisScores = AnalysisScores(
-                    fitScores: [], // Legacy fit/gap scores deprecated in 5-variable system
-                    gapScores: [], // Legacy fit/gap scores deprecated in 5-variable system
+                    fitScores: [], // Deprecated in 5-variable system
+                    gapScores: [], // Deprecated in 5-variable system
                     finalScore: existingJob.analysisScores.finalScore
                 )
                 
@@ -820,7 +818,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let actualYOE = try await calculateJobRelevantYOE(resumeText: request.resumeText, jobDescription: cleanedJob)
             
             // Step 3: Get LLM evaluation for experience, education, and skills
-            let llmResult = try await GuidedEvaluationService.performFiveVariableLLMEvaluation(resumeText: request.resumeText, jobDescription: cleanedJob)
+            let llmResult = try await CandidateEvaluationAI.performFiveVariableLLMEvaluation(resumeText: request.resumeText, jobDescription: cleanedJob)
             
             // Step 4: Calculate final score using new 5-variable formula
             let scoringResult = ScoreCalculator.computeCandidateScore(
@@ -937,7 +935,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let actualYOE = try await calculateJobRelevantYOE(resumeText: request.resumeText, jobDescription: cleanedJob)
             
             // Step 3: Get LLM evaluation for experience, education, and skills
-            let llmResult = try await GuidedEvaluationService.performFiveVariableLLMEvaluation(resumeText: request.resumeText, jobDescription: cleanedJob)
+            let llmResult = try await CandidateEvaluationAI.performFiveVariableLLMEvaluation(resumeText: request.resumeText, jobDescription: cleanedJob)
             
             // Step 4: Calculate final score using new 5-variable formula
             let scoringResult = ScoreCalculator.computeCandidateScore(
@@ -963,13 +961,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             Skills: \(llmResult.skills_rationale)
             
             Component Details:
-            YOE Factor (f_YOE): \(String(format: "%.3f", scoringResult.components.f_YOE))
-            Experience Score (S_exp): \(String(format: "%.3f", scoringResult.components.S_exp))
-            Education Weight (w_edu): \(String(format: "%.3f", scoringResult.components.w_edu))
-            Education Score (S_edu): \(String(format: "%.3f", scoringResult.components.S_edu))
-            Base Score (S_base): \(String(format: "%.3f", scoringResult.components.S_base))
-            Skills Multiplier (M_skill): \(String(format: "%.3f", scoringResult.components.M_skill))
-            Final Score (S_final): \(String(format: "%.3f", scoringResult.components.S_final))
+            YOE Factor (f_YOE): \(String(format: "%.3f", scoringResult.breakdown.fYOE))
+            Experience Score (S_exp): \(String(format: "%.3f", scoringResult.breakdown.sExp))
+            Education Weight (w_edu): \(String(format: "%.3f", scoringResult.breakdown.wEdu))
+            Education Score (S_edu): \(String(format: "%.3f", scoringResult.breakdown.sEdu))
+            Base Score (S_base): \(String(format: "%.3f", scoringResult.breakdown.sBase))
+            Skills Multiplier (M_skill): \(String(format: "%.3f", scoringResult.breakdown.mSkill))
+            Final Score (S_final): \(String(format: "%.3f", scoringResult.breakdown.final01))
             """
             
             // Send response back to desktop app

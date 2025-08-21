@@ -2,87 +2,142 @@
 //  ScoreCalculator.swift
 //  WhatYOE
 //
-//  Centralized scoring calculation to ensure consistency across the app
+//  Centralized scoring calculation using improved Option B algorithm
+//  Ensures consistency across the app with enhanced score calculation
 //
 
 import Foundation
 
-struct ScoreCalculator {
-    // (Legacy fit/gap-based scoring removed)
+struct ScoreCalculator {}
+
+// MARK: - Improved Option B Scoring System
+
+/// Input structure for candidate evaluation
+struct EvaluationInputs {
+    let actualYOE: Double        // candidate's job-relevant YOE
+    let requiredYOE: Double      // job's required YOE (seniority target)
+    let expScore: Int            // 0...4
+    let eduScore: Int            // 0...4
+    let skillScore: Int          // 0...4
 }
 
-// MARK: - 5-variable Scoring System (current active system)
-
-struct ScoringComponents {
-    let f_YOE: Double        // YOE factor (capped at 1.0)
-    let S_exp: Double        // Experience score
-    let w_edu: Double        // Education weight
-    let S_edu: Double        // Education score  
-    let S_base: Double       // Base weighted score
-    let M_skill: Double      // Skills multiplier
-    let S_final: Double      // Final score (0-1)
-}
-
+/// Updated scoring parameters with improved Option B algorithm
 struct ScoringParameters {
-    let H: Double            // Education decay smoothing (default: 5.0)
-    let epsilon: Double      // Division by zero prevention (default: 0.01)
-    let f_YOE_cap: Double    // Experience factor cap (fixed: 1.0)
-    
-    static let `default` = ScoringParameters(H: 5.5, epsilon: 0.01, f_YOE_cap: 1.5)
+    // Seniority factor
+    let epsilon: Double          // avoids div-by-zero when requiredYOE == 0
+    let fYOECap: Double          // caps over-qualification boost (e.g., 1.5)
+
+    // Education weight as a linear function of required YOE:
+    //   wEdu = clamp(wEduIntercept - wEduSlope * requiredYOE, wEduMin, wEduMax)
+    let wEduIntercept: Double    // e.g., 0.70  (higher weight at entry level)
+    let wEduSlope: Double        // e.g., 0.10  (drops ~0.1 per YOE)
+    let wEduMin: Double          // e.g., 0.15
+    let wEduMax: Double          // e.g., 0.60
+
+    // Skills multiplier (penalty-only): [0.8, 1.0]
+    //   M_skill = 0.8 + 0.2 * (skill/4)
+    let skillFloor: Double       // e.g., 0.80
+    let skillSpan: Double        // e.g., 0.20
+
+    static let `default` = ScoringParameters(
+        epsilon: 0.01,
+        fYOECap: 1.5,
+        wEduIntercept: 0.85,
+        wEduSlope: 0.05,
+        wEduMin: 0.15,
+        wEduMax: 0.75,
+        skillFloor: 0.95,
+        skillSpan: 0.05
+    )
 }
 
-struct FiveVariableScoringResult {
+/// Detailed score breakdown for debugging and analysis
+struct ScoreBreakdown {
+    let fYOE: Double
+    let sExp: Double
+    let sEdu: Double
+    let wEdu: Double
+    let sBase: Double
+    let mSkill: Double
+    let final01: Double      // 0...1
+    let finalPercent: Double // 0...100
+}
+
+/// Modern result structure
+struct ScoringResult {
     let score: Double              // 0-1 scale
     let score_percentage: Int      // 0-100 scale  
-    let components: ScoringComponents
-    let inputs: ScoringInputs
+    let breakdown: ScoreBreakdown
     let success: Bool
     let error: String?
 }
 
-struct ScoringInputs {
-    let actual_yoe: Double      // From resume parsing (0-8)
-    let required_yoe: Double    // From job parsing (0-8)
-    let exp_score: Int          // From LLM (0-4)
-    let edu_score: Int          // From LLM (0-4)
-    let skill_score: Int        // From LLM (0-4)
-}
-
-extension Double {
-    func map(from: ClosedRange<Double>, to: ClosedRange<Double>) -> Double {
-        let fromRange = from.upperBound - from.lowerBound
-        let toRange = to.upperBound - to.lowerBound
-        let normalized = (self - from.lowerBound) / fromRange
-        return to.lowerBound + (normalized * toRange)
-    }
-}
+// MARK: - Core Scoring Algorithm (Option B)
 
 extension ScoreCalculator {
-    // MARK: - 5-variable scoring system
-    static func validateInputs(
-        actualYOE: Double,
-        requiredYOE: Double, 
-        expScore: Int,
-        eduScore: Int,
-        skillScore: Int
-    ) throws {
-        // Range validations
-        if actualYOE < 0 || actualYOE > 8 {
-            throw NSError(domain: "ScoringError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid actualYOE: \(actualYOE). Must be 0-8."])
-        }
-        
-        if requiredYOE < 0 || requiredYOE > 8 {
-            throw NSError(domain: "ScoringError", code: 2, userInfo: [NSLocalizedDescriptionKey: "Invalid requiredYOE: \(requiredYOE). Must be 0-8."])
-        }
-        
-        // LLM scores must be integers 0-4
-        let scores = [(expScore, "expScore"), (eduScore, "eduScore"), (skillScore, "skillScore")]
-        for (score, name) in scores {
-            if score < 0 || score > 4 {
-                throw NSError(domain: "ScoringError", code: 3, userInfo: [NSLocalizedDescriptionKey: "Invalid \(name): \(score). Must be integer 0-4."])
-            }
-        }
+    
+    /// Improved Option B scoring algorithm with enhanced education weighting
+    ///
+    /// **Key Improvements:**
+    /// • Linear education weight decay instead of exponential
+    /// • Proper 0-1 normalization for all components  
+    /// • Skills penalty-only multiplier [0.8, 1.0]
+    /// • Square root scaling for diminishing returns
+    ///
+    /// - Parameters:
+    ///   - inputs: EvaluationInputs with candidate and job data
+    ///   - params: ScoringParameters for algorithm tuning
+    /// - Returns: ScoreBreakdown with detailed component analysis
+    static func scoreOptionB(
+        inputs: EvaluationInputs,
+        params: ScoringParameters = .default
+    ) -> ScoreBreakdown {
+
+        // 1) Seniority match factor with diminishing returns & cap
+        //    fYOE = min(fYOECap, sqrt(actual / (required + ε)))
+        let denom = max(inputs.requiredYOE + params.epsilon, params.epsilon)
+        let ratio = max(inputs.actualYOE / denom, 0.0)
+        let fYOE = min(params.fYOECap, sqrt(ratio))
+
+        // 2) Experience score normalized to [0,1]
+        //    raw max of sqrt(expScore) is 2 (since expScore ∈ [0,4])
+        //    include YOE factor and divide by (2 * fYOECap) so even max is bounded in [0,1]
+        let sExp = clamp01((sqrt(Double(inputs.expScore)) * fYOE) / (2.0 * params.fYOECap))
+
+        // 3) Education score normalized to [0,1]
+        //    simple: sqrt(eduScore) / 2  (since sqrt(4) = 2)
+        let sEdu = clamp01(sqrt(Double(inputs.eduScore)) / 2.0)
+
+        // 4) Education weight as a linear function of required YOE (then clamped)
+        //    wEdu = clamp(wEduIntercept - wEduSlope * requiredYOE, wEduMin, wEduMax)
+        let wEduRaw = params.wEduIntercept - params.wEduSlope * inputs.requiredYOE
+        let wEdu = clamp(wEduRaw, params.wEduMin, params.wEduMax)
+
+        // 5) Base blend (experience vs education), then clamp to [0,1]
+        let sBase = clamp01((1.0 - wEdu) * sExp + wEdu * sEdu)
+
+        // 6) Skills multiplier (penalty-only) in [skillFloor, skillFloor + skillSpan]
+        //    M_skill = floor + span * (skill/4)
+        let skillFrac = max(0.0, min(Double(inputs.skillScore) / 4.0, 1.0))
+        let mSkill = params.skillFloor + params.skillSpan * skillFrac
+
+        // 7) Final score in [0,1] and percent
+        let final01 = clamp01(sBase * mSkill)
+        let finalPercent = final01 * 100.0
+
+        return ScoreBreakdown(
+            fYOE: fYOE,
+            sExp: sExp,
+            sEdu: sEdu,
+            wEdu: wEdu,
+            sBase: sBase,
+            mSkill: mSkill,
+            final01: final01,
+            finalPercent: finalPercent
+        )
     }
+    
+    // MARK: - Input Normalization
     
     static func normalizeInputs(
         actualYOE: Double,
@@ -90,16 +145,33 @@ extension ScoreCalculator {
         expScore: Int,
         eduScore: Int,
         skillScore: Int
-    ) -> ScoringInputs {
-        return ScoringInputs(
-            actual_yoe: max(0, min(8, actualYOE)),
-            required_yoe: max(0, min(8, requiredYOE)),
-            exp_score: max(0, min(4, expScore)),
-            edu_score: max(0, min(4, eduScore)),
-            skill_score: max(0, min(4, skillScore))
+    ) -> EvaluationInputs {
+        return EvaluationInputs(
+            actualYOE: max(0, min(8, actualYOE)),
+            requiredYOE: max(0, min(8, requiredYOE)),
+            expScore: max(0, min(4, expScore)),
+            eduScore: max(0, min(4, eduScore)),
+            skillScore: max(0, min(4, skillScore))
         )
     }
     
+    // MARK: - Main Scoring Function (Updated)
+    
+    /// Primary scoring function using improved Option B algorithm
+    ///
+    /// **Features:**
+    /// • Enhanced education weighting with linear decay
+    /// • Proper normalization preventing score inflation  
+    /// • Skills penalty-only approach for realistic scoring
+    ///
+    /// - Parameters:
+    ///   - actualYOE: Candidate's job-relevant years of experience (0-8)
+    ///   - requiredYOE: Job's required years of experience (0-8)
+    ///   - expScore: LLM experience relevance score (0-4)
+    ///   - eduScore: LLM education relevance score (0-4)
+    ///   - skillScore: LLM skills proficiency score (0-4)
+    ///   - params: Scoring parameters for algorithm tuning
+    /// - Returns: ScoringResult with detailed breakdown
     static func computeCandidateScore(
         actualYOE: Double,      // From resume parsing
         requiredYOE: Double,    // From job parsing  
@@ -107,86 +179,33 @@ extension ScoreCalculator {
         eduScore: Int,          // From LLM (0-4)
         skillScore: Int,        // From LLM (0-4)
         params: ScoringParameters = .default
-    ) -> FiveVariableScoringResult {
+    ) -> ScoringResult {
         
-        do {
-            // Validate inputs
-            try validateInputs(
-                actualYOE: actualYOE,
-                requiredYOE: requiredYOE,
-                expScore: expScore,
-                eduScore: eduScore,
-                skillScore: skillScore
-            )
-            
-            // Normalize inputs
-            let inputs = normalizeInputs(
-                actualYOE: actualYOE,
-                requiredYOE: requiredYOE,
-                expScore: expScore,
-                eduScore: eduScore,
-                skillScore: skillScore
-            )
-            
-            // 1. YOE Factor (with cap at 1.5)
-            let f_YOE = min(
-                params.f_YOE_cap, 
-                sqrt(inputs.actual_yoe / (inputs.required_yoe + params.epsilon))
-            )
-            
-            // 2. Experience Score (mapped to 0.2-1.15 range)
-            let raw_exp = sqrt(Double(inputs.exp_score)) * f_YOE
-            let S_exp = raw_exp.map(from: 0...3.0, to: 0.2...1.05)
-            
-            // 3. Education Weight (mapped to 0.1-0.7 range)
-            let raw_w_edu = 1.0 / (1.0 + pow(inputs.required_yoe / params.H, 2))
-            let w_edu = raw_w_edu.map(from: 0.28...1.0, to: 0.1...0.7)
-            
-            // 4. Education Score (mapped to 0.2-1.15 range)
-            let raw_edu = sqrt(Double(inputs.edu_score))
-            let S_edu = raw_edu.map(from: 0...2.44, to: 0.2...1.05)
-            
-            // 5. Base Score (weighted combination)
-            let S_base = (1.0 - w_edu) * S_exp + w_edu * S_edu
-            
-            // 6. Skills Multiplier (penalty-only, fixed formula)
-            let M_skill = 0.5 + 0.5 * (Double(inputs.skill_score) / 4.0)
-            
-            // 7. Final Score (mapped to 0-100 range)
-            let raw_final = S_base * M_skill
-            let S_final = max(0.0, min(1.0, raw_final))
-            
-            let components = ScoringComponents(
-                f_YOE: f_YOE,
-                S_exp: S_exp,
-                w_edu: w_edu,
-                S_edu: S_edu,
-                S_base: S_base,
-                M_skill: M_skill,
-                S_final: S_final
-            )
-            
-            return FiveVariableScoringResult(
-                score: S_final,
-                score_percentage: Int((S_final * 100.0).rounded()),
-                components: components,
-                inputs: inputs,
-                success: true,
-                error: nil
-            )
-            
-            } catch {
-            return FiveVariableScoringResult(
-                score: 0,
-                score_percentage: 0,
-                components: ScoringComponents(f_YOE: 0, S_exp: 0, w_edu: 0, S_edu: 0, S_base: 0, M_skill: 0, S_final: 0),
-                inputs: ScoringInputs(actual_yoe: 0, required_yoe: 0, exp_score: 0, edu_score: 0, skill_score: 0),
-                success: false,
-                error: error.localizedDescription
-            )
-        }
+        // Normalize inputs
+        let normalizedInputs = normalizeInputs(
+            actualYOE: actualYOE,
+            requiredYOE: requiredYOE,
+            expScore: expScore,
+            eduScore: eduScore,
+            skillScore: skillScore
+        )
+        
+        // Compute score using improved Option B algorithm
+        let breakdown = scoreOptionB(inputs: normalizedInputs, params: params)
+        
+        return ScoringResult(
+            score: breakdown.final01,
+            score_percentage: Int(breakdown.finalPercent.rounded()),
+            breakdown: breakdown,
+            success: true,
+            error: nil
+        )
     }
     
+    // MARK: - Rating Classification
+    
+    /// Convert percentage score to rating classification
+    /// **Categories:** Good (93-100%), Maybe (85-92%), Poor (75-84%), Denied (<75%)
     static func specRating(for scorePct: Int) -> String {
         if scorePct < 75 { return "Denied" }
         if scorePct < 85 { return "Poor" }
@@ -194,3 +213,18 @@ extension ScoreCalculator {
         return "Good"
     }
 }
+
+// MARK: - Helper Functions
+
+/// Clamp value to [0,1] range
+@inline(__always)
+private func clamp01(_ x: Double) -> Double {
+    return min(max(x, 0.0), 1.0)
+}
+
+/// Clamp value to specified range
+@inline(__always)
+private func clamp(_ x: Double, _ lo: Double, _ hi: Double) -> Double {
+    return min(max(x, lo), hi)
+}
+

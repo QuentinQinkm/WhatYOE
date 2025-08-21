@@ -154,7 +154,7 @@ class ResumeManager {
         cleanedText = cleanedText.replacingOccurrences(of: "\n\\s*\n", with: "\n\n", options: .regularExpression)
         cleanedText = cleanedText.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        // TODO: Implement AI-based cleaning using PromptTemplates.resumeCleaningPrompt
+        // TODO: Implement AI-based cleaning using AIPromptLibrary.resumeCleaningPrompt
         // This would require LanguageModelSession integration
         
         return cleanedText
@@ -174,7 +174,7 @@ class ResumeManager {
         // 5. Return confidence score for validation
         
         do {
-            let result = try await GuidedEvaluationService.performResumeParsingForYOE(resumeText: resumeText)
+            let result = try await CandidateEvaluationAI.performResumeParsingForYOE(resumeText: resumeText)
             return result
         } catch {
             os_log(.error, "Failed to parse YOE from resume: %@", error.localizedDescription)

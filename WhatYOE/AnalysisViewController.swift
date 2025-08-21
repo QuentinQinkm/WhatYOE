@@ -400,8 +400,8 @@ class ResumeViewController: NSViewController {
     }
     
     private func cleanText(_ text: String) async throws -> String {
-        let session = LanguageModelSession(instructions: PromptTemplates.resumeCleaningPrompt)
-        let prompt = PromptTemplates.resumeCleaningPrompt + "\n\nText to clean:\n\(text)"
+        let session = LanguageModelSession(instructions: AIPromptLibrary.resumeCleaningPrompt)
+        let prompt = AIPromptLibrary.resumeCleaningPrompt + "\n\nText to clean:\n\(text)"
         let response = try await session.respond(to: prompt)
         return response.content.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -665,7 +665,7 @@ class LocalAnalysisViewController: NSViewController {
     // MARK: - AI Analysis Methods
     private func cleanJobDescription(_ jobText: String) async -> String {
         do {
-            let session = LanguageModelSession(instructions: PromptTemplates.jobCleaningPrompt)
+            let session = LanguageModelSession(instructions: AIPromptLibrary.jobCleaningPrompt)
             let prompt = "Clean this job description:\n\n\(jobText)"
             let response = try await session.respond(to: prompt)
             return response.content

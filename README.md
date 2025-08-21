@@ -5,6 +5,10 @@ A macOS application that analyzes how well a resume matches a job description us
 ## ⚠️ Current Status - Development Version
 -----Aug 18------
 UI improvements and button standardization:
+- add function: Jump to resume, sorting, refresh list with active listener
+- now the extension skips scanned jobs
+- Add clean all jobs function
+- Foundation model is still super unconsistent, pending tunning
 - **Safari Extension Popup Redesign**: Complete restructuring with proper component ordering, full-width buttons, and improved styling
 - **Desktop App Button Layout**: Added LinkedIn and star buttons to job analysis section with proper overlay positioning
 - **Fixed Button Sizing**: Standardized all glass icon buttons to 40x40px fixed size for visual consistency

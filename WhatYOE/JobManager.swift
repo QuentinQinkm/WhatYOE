@@ -274,7 +274,7 @@ class JobManager {
     
     private func extractScoresFromAnalysisResult(_ result: String) -> JobAnalysisScores {
         // Extract final score from formatted result, set others to 0
-        // This method will be updated to handle both legacy and new formats
+        // This method handles the current 5-variable system format
         let pattern = "Final Score:\\s*([0-9]+)"
         if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
             let range = NSRange(result.startIndex..<result.endIndex, in: result)
